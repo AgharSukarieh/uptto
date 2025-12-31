@@ -1,0 +1,458 @@
+/* ============================================
+   Footer Component Styles
+   ============================================ */
+
+/* ===== Landing Footer (صفحة الهبوط) ===== */
+
+.landing-footer {
+  position: relative;
+  background: url("../assets/footer_background.svg") center top/cover no-repeat;
+  clip-path: polygon(0 0%, 100% 0, 100% 100%, 0 100%);
+  min-height: clamp(420px, 54vw, 553px);
+  z-index: 4;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 40px clamp(20px, 5vw, 64px) 24px;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.9rem;
+  box-sizing: border-box;
+}
+
+.landing-footer__row {
+  flex: 1 1 100%;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: clamp(16px, 4vw, 56px);
+  width: 100%;
+  margin-top: auto;
+  position: absolute;
+  top: 94%;
+  left: 0;
+}
+
+.landing-footer__text {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  font-size: clamp(0.7rem, 1.8vw, 0.85rem);
+  line-height: 1.4;
+}
+
+.landing-footer__text--flag {
+  font-weight: 600;
+}
+
+.landing-footer__nav {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: clamp(12px, 3vw, 40px);
+  margin: 0;
+  padding: 0;
+}
+
+.landing-footer__nav li {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  position: relative;
+}
+
+.landing-footer__nav li + li::before {
+  content: "";
+  width: 1px;
+  height: 16px;
+  background: rgba(255, 255, 255, 0.4);
+  display: inline-block;
+}
+
+.landing-footer__nav a {
+  text-decoration: none;
+  color: inherit;
+  font-size: clamp(0.65rem, 1.6vw, 0.78rem);
+  font-weight: 500;
+  transition: opacity 0.2s ease;
+}
+
+.landing-footer__nav a:hover {
+  opacity: 0.8;
+}
+
+/* ===== Auth Footer (صفحات تسجيل الدخول والتسجيل) ===== */
+
+.landing-footer--auth {
+  background: none;
+  clip-path: none;
+  min-height: auto;
+  margin-top: auto;
+  padding-top: 18px;
+  padding-bottom: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  position: relative;
+  z-index: 2;
+}
+
+.landing-footer--auth .landing-footer__row {
+  width: min(1122px, 95%);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: clamp(16px, 4vw, 56px);
+  position: static;
+  top: auto;
+  left: auto;
+  padding-top: 12px;
+}
+
+.landing-footer--auth .landing-footer__text {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  font-size: clamp(0.72rem, 1.6vw, 0.85rem);
+  line-height: 1.4;
+}
+
+.landing-footer--auth .landing-footer__text--flag {
+  font-weight: 600;
+}
+
+.landing-footer--auth .landing-footer__nav {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(12px, 3vw, 40px);
+  margin: 0;
+  padding: 0;
+  color: inherit;
+  text-align: center;
+}
+
+.landing-footer--auth .landing-footer__nav li {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  position: relative;
+}
+
+.landing-footer--auth .landing-footer__nav li + li::before {
+  content: "";
+  width: 1px;
+  height: 16px;
+  background: rgba(0, 0, 0, 0.2);
+  display: inline-block;
+}
+
+.landing-footer--auth .landing-footer__nav a {
+  text-decoration: none;
+  color: inherit;
+  font-size: clamp(0.68rem, 1.8vw, 0.82rem);
+  transition: opacity 0.2s ease;
+}
+
+.landing-footer--auth .landing-footer__nav a:hover {
+  opacity: 0.8;
+}
+
+/* ===== Dashboard Footer ===== */
+
+.dashboard-home__footer {
+  margin-top: auto;
+  border-top: 1px solid rgba(15, 31, 45, 0.08);
+  background: #ffffff;
+  padding: 24px clamp(16px, 5vw, 48px);
+}
+
+.dashboard-home__footer .landing-footer__row {
+  color: #0f1f2d;
+}
+
+.dashboard-home__footer .landing-footer__text {
+  color: #1f2933;
+}
+
+.dashboard-home__footer .landing-footer__nav a {
+  color: #4b5563;
+}
+
+.dashboard-home__footer .landing-footer__nav li + li::before {
+  background: rgba(15, 31, 45, 0.15);
+}
+
+/* ===== Main Footer (لـ AuthCard) ===== */
+
+.main-footer {
+  background-color: #007C89;
+  color: #fff;
+  padding: 15px 50px;
+  font-size: 0.85em;
+  overflow-x: hidden;
+  width: 100%;
+  max-width: 100vw;
+  position: relative;
+  margin-top: auto;
+  z-index: 2;
+}
+
+.main-footer::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 50px;
+  left: 50px;
+  height: 1px;
+  background-color: #CECECE;
+}
+
+.footer-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 1528px;
+  margin-right: 0;
+  margin-left: auto;
+}
+
+.footer-links {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.footer-links a {
+  text-decoration: none;
+  color: #fff;
+  margin-right: 20px;
+  transition: color 0.3s ease;
+  font-size: 0.85em;
+}
+
+.footer-links a:hover {
+  color: #00CED1;
+}
+
+.footer-info {
+  display: flex;
+  align-items: center;
+  gap: 30px;
+  margin-right: auto;
+  margin-left: 0;
+  flex-wrap: wrap;
+}
+
+.copyright {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.copyright-icon {
+  width: 16px;
+  height: 16px;
+  filter: invert(1);
+}
+
+.country-flag {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.country-flag .flag-icon {
+  font-size: 1.25rem;
+  display: inline-block;
+}
+
+/* ===== Responsive Design ===== */
+
+@media (max-width: 1024px) {
+  .main-footer {
+    padding: 15px 20px;
+  }
+
+  .footer-content {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 15px;
+  }
+
+  .footer-links {
+    flex-wrap: wrap;
+    gap: 15px;
+  }
+
+  .footer-links a {
+    margin-right: 0;
+  }
+
+  .footer-info {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 15px;
+    margin-right: 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .landing-footer {
+    min-height: clamp(300px, 40vw, 420px);
+    padding: 30px clamp(16px, 4vw, 40px) 20px;
+  }
+
+  .landing-footer__row {
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    position: static;
+    top: auto;
+    left: auto;
+    padding: 0;
+  }
+
+  .landing-footer__text {
+    font-size: clamp(0.65rem, 1.5vw, 0.75rem);
+    text-align: center;
+  }
+
+  .landing-footer__nav {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12px;
+  }
+
+  .landing-footer__nav li + li::before {
+    display: none;
+  }
+
+  .landing-footer__nav a {
+    font-size: clamp(0.6rem, 1.4vw, 0.7rem);
+  }
+
+  .landing-footer--auth {
+    padding-top: 16px;
+    padding-bottom: 12px;
+  }
+
+  .landing-footer--auth .landing-footer__row {
+    flex-direction: column;
+    gap: 12px;
+    padding-top: 8px;
+  }
+
+  .landing-footer--auth .landing-footer__text {
+    font-size: clamp(0.65rem, 1.5vw, 0.75rem);
+    text-align: center;
+  }
+
+  .landing-footer--auth .landing-footer__nav {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .landing-footer--auth .landing-footer__nav li + li::before {
+    display: none;
+  }
+
+  .landing-footer--auth .landing-footer__nav a {
+    font-size: clamp(0.6rem, 1.4vw, 0.7rem);
+  }
+
+  .dashboard-home__footer {
+    padding: 20px clamp(12px, 4vw, 24px);
+  }
+
+  .dashboard-home__footer .landing-footer__row {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .main-footer {
+    padding: 12px 16px;
+  }
+
+  .footer-content {
+    gap: 12px;
+  }
+
+  .footer-links {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .footer-info {
+    gap: 12px;
+  }
+}
+
+/* ===== Dark Mode Support ===== */
+
+.dark-mode .landing-footer--auth,
+.dark-mode .landing-footer--auth * {
+  background: inherit !important;
+  color: inherit !important;
+  border-color: inherit !important;
+}
+
+.dark-mode .landing-footer--auth {
+  background: none !important;
+  color: #fff !important;
+}
+
+.dark-mode .landing-footer--auth .landing-footer__nav a {
+  color: #fff !important;
+}
+
+.dark-mode .dashboard-home__footer {
+  background: #ffffff !important;
+}
+
+.dark-mode .dashboard-home__footer .landing-footer__row,
+.dark-mode .dashboard-home__footer .landing-footer__text {
+  color: #0f1f2d !important;
+}
+
+.dark-mode .dashboard-home__footer .landing-footer__nav a {
+  color: #4b5563 !important;
+}
+
+/* ===== Accessibility ===== */
+
+.landing-footer[aria-label],
+.main-footer[aria-label] {
+  /* Ensure footer is properly announced to screen readers */
+}
+
+.landing-footer__nav[role="list"] {
+  /* Ensure list is properly announced */
+}
+
+.landing-footer__nav a:focus,
+.footer-links a:focus {
+  outline: 2px solid rgba(255, 255, 255, 0.8);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* ===== Print Styles ===== */
+
+@media print {
+  .landing-footer,
+  .landing-footer--auth,
+  .main-footer {
+    display: none;
+  }
+}
+

@@ -1,0 +1,345 @@
+/* Algorithms Premium Redesign - Ultra Modern & Elegant */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+
+:root {
+  --p-primary: #00818a;
+  --p-primary-soft: rgba(76, 124, 146, 0.08);
+  --p-bg: #fcfcfd;
+  --p-glass: rgba(255, 255, 255, 0.7);
+  --p-glass-border: rgba(255, 255, 255, 0.4);
+  --p-text-dark: #0f172a;
+  --p-text-main: #334155;
+  --p-text-muted: #64748b;
+  --p-accent: #0976a8;
+  --p-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.02);
+  --p-radius-lg: 32px;
+  --p-radius-md: 24px;
+  --p-transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.algorithms-page {
+  min-height: 100vh;
+  background: 
+    linear-gradient(rgba(252, 252, 253, 0.98), rgba(241, 245, 249, 1.95)),
+    url('../../assets/v.jpg');
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+  padding: 4rem 1.5rem;
+  font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
+  color: var(--p-text-main);
+  overflow-x: hidden;
+  position: relative;
+}
+
+.algorithms-container {
+  max-width: 1300px;
+  margin: 0 auto;
+  position: relative;
+}
+
+/* Back Button */
+.algorithms-back-btn {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  border-radius: 12px;
+  color: #ffffff;
+  font-size: 1.5rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  z-index: 1000;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+.algorithms-back-btn i {
+  transform: scaleX(-1);
+}
+
+.algorithms-back-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.4);
+}
+
+@media (max-width: 768px) {
+  .algorithms-back-btn {
+    top: 15px;
+    right: 15px;
+    width: 44px;
+    height: 44px;
+    font-size: 1.3rem;
+  }
+}
+
+/* Floating Search Bar */
+.algorithms-search-wrapper {
+  position: relative;
+  max-width: 700px;
+  margin: 0 auto 5rem;
+  perspective: 1000px;
+}
+
+.algorithms-search-input {
+  width: 100%;
+  padding: 1.25rem 2rem 1.25rem 4rem;
+  border-radius: var(--p-radius-md);
+  border: 1px solid var(--p-glass-border);
+  background: var(--p-glass);
+  backdrop-filter: blur(20px);
+  box-shadow: var(--p-shadow);
+  font-size: 1.1rem;
+  transition: var(--p-transition);
+  outline: none;
+  color: var(--p-text-dark);
+}
+
+.algorithms-search-input:focus {
+  transform: translateZ(20px);
+  border-color: var(--p-accent);
+  box-shadow: 0 25px 50px -12px rgba(79, 70, 229, 0.15);
+}
+
+.algorithms-search-icon {
+  position: absolute;
+  left: 1.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 1.8rem;
+  color: var(--p-accent);
+  pointer-events: none;
+}
+
+/* Section Styling */
+.algorithms-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 6rem;
+}
+
+/* Premium Tag Card */
+.tag-header-card {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 3rem;
+  align-items: center;
+  padding: 3rem;
+  background: linear-gradient(135deg, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0.15) 100%);
+  backdrop-filter: blur(10px);
+  border-radius: var(--p-radius-lg);
+  border: 1px solid var(--p-glass-border);
+  box-shadow: var(--p-shadow);
+  margin-bottom: 3rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.tag-header-card::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -10%;
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, var(--p-primary-soft) 0%, transparent 70%);
+  z-index: 0;
+}
+
+.tag-icon-wrapper {
+  width: 120px;
+  height: 120px;
+  background: white;
+  border-radius: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 15px 35px rgba(0,0,0,0.05);
+  z-index: 1;
+  transition: var(--p-transition);
+}
+
+.tag-header-card:hover .tag-icon-wrapper {
+  transform: rotate(-5deg) scale(1.05);
+}
+
+.tag-icon-wrapper img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 28px;
+}
+
+.tag-info {
+  z-index: 1;
+}
+
+.tag-title {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: var(--p-text-dark);
+  margin-bottom: 1rem;
+  letter-spacing: -0.03em;
+}
+
+.tag-description {
+  font-size: 1.15rem;
+  color: var(--p-text-muted);
+  line-height: 1.8;
+  max-width: 900px;
+  font-weight: 400;
+}
+
+/* Premium Algorithms Grid */
+.algorithms-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 2rem;
+}
+
+.algorithm-card {
+  background: white;
+  border-radius: var(--p-radius-md);
+  padding: 2.5rem;
+  border: 1px solid #f1f5f9;
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02);
+  transition: var(--p-transition);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.algorithm-card:hover {
+  transform: translateY(-12px);
+  box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.08);
+  border-color: var(--p-primary-soft);
+}
+
+.algo-card-header {
+  margin-bottom: 1.5rem;
+}
+
+.algo-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--p-text-dark);
+  margin-bottom: 0.75rem;
+  transition: var(--p-transition);
+}
+
+.algorithm-card:hover .algo-title {
+  color: var(--p-primary);
+}
+
+.algo-badge {
+  display: inline-block;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--p-accent);
+  margin-bottom: 1rem;
+}
+
+.algo-overview {
+  font-size: 1rem;
+  color: var(--p-text-muted);
+  line-height: 1.7;
+  margin-bottom: 2rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.algo-footer {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+}
+
+.read-more {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--p-text-dark);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  transition: var(--p-transition);
+}
+
+.read-more i {
+  font-size: 1.4rem;
+  transition: var(--p-transition);
+}
+
+.algorithm-card:hover .read-more {
+  color: var(--p-primary);
+  gap: 1.25rem;
+}
+
+/* Animations */
+@keyframes reveal {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.algorithm-section {
+  animation: reveal 1s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+}
+
+/* Empty State */
+.algorithms-empty {
+  text-align: center;
+  padding: 6rem 2rem;
+  background: var(--p-glass);
+  backdrop-filter: blur(10px);
+  border-radius: var(--p-radius-lg);
+  border: 1px solid var(--p-glass-border);
+}
+
+.algorithms-empty i {
+  font-size: 5rem;
+  color: var(--p-primary-soft);
+  margin-bottom: 2rem;
+}
+
+/* Responsive */
+@media (max-width: 992px) {
+  .tag-header-card {
+    grid-template-columns: 1fr;
+    text-align: center;
+    padding: 2.5rem;
+    gap: 2rem;
+  }
+  
+  .tag-icon-wrapper {
+    margin: 0 auto;
+  }
+  
+  .tag-title {
+    font-size: 2rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .algorithms-page {
+    padding: 2rem 1rem;
+  }
+  
+  .algorithms-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .algorithm-card {
+    padding: 2rem;
+  }
+}
