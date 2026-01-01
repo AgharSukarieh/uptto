@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { useParams, useNavigate } from "react-router-dom";
 import { Editor } from "@tinymce/tinymce-react";
 import api from "../../../Service/api";
+import { getAlgorithmById, updateAlgorithm } from "../../../Service/algorithmService";
 
 
 const uploadUserImage = async (imageFile, currentImageURL = "", onUploadProgress) => {
@@ -27,6 +28,8 @@ export default function EditAlgorithm() {
   const [algorithm, setAlgorithm] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
 
   const [modal, setModal] = useState({
     show: false,
@@ -55,23 +58,37 @@ export default function EditAlgorithm() {
     progress: null, // 0..100 or null
   });
 
-  // 🔹 Fetch data
+  // 🔹 Fetch data - نفس الطريقة المستخدمة في AlgorithmDetail
   const fetchAlgorithm = async () => {
-    if (!id) return setError("ID not specified.");
+    if (!id) {
+      setError("⚠️ لم يتم تحديد المعرف (ID) في الرابط.");
+      setLoading(false);
+      return;
+    }
+    
     try {
       setLoading(true);
-      const response = await api.get(`/explained-tags/${id}`);
-      const data = {
-        ...response.data,
-        tagId: response.data.tagId || 0,
-        exampleTags: response.data.exampleTags || [],
-        youTubeLinks: response.data.youTubeLinks || [],
-        videos: response.data.videos || [],
+      setError("");
+      console.log("🔍 [EditAlgorithm] Fetching algorithm for id:", id);
+      
+      // استخدام نفس الطريقة المستخدمة في AlgorithmDetail (للمستخدم)
+      const data = await getAlgorithmById(Number(id));
+      console.log("✅ [EditAlgorithm] Algorithm fetched:", data);
+      
+      // معالجة البيانات - نفس الشكل المستخدم في AlgorithmDetail
+      const processedData = {
+        ...data,
+        tagId: data.tagId || (data.tag?.id) || (data.tags && data.tags[0]?.id) || 0,
+        exampleTags: data.exampleTags || [],
+        youTubeLinks: data.youTubeLinks || [],
+        videos: data.videos || [],
       };
-      setAlgorithm(data);
+      
+      console.log("✅ [EditAlgorithm] Processed data:", processedData);
+      setAlgorithm(processedData);
 
       // init pendingFiles array aligned with videos length
-      const initialPending = (data.videos || []).map(() => ({
+      const initialPending = (processedData.videos || []).map(() => ({
         videoFile: null,
         videoPreview: null,
         thumbFile: null,
@@ -79,8 +96,18 @@ export default function EditAlgorithm() {
       }));
       setPendingFiles(initialPending);
     } catch (err) {
-      console.error(err);
-      setError("Error fetching data.");
+      console.error("❌ [EditAlgorithm] Error fetching algorithm:", err);
+      if (err.response) {
+        if (err.response.status === 404) {
+          setError("🚫 العنصر المطلوب غير موجود (404).");
+        } else {
+          setError(`⚠️ خطأ من السيرفر: ${err.response.status}`);
+        }
+      } else if (err.request) {
+        setError("🌐 لا يمكن الاتصال بالسيرفر. تحقق من الاتصال أو إعدادات CORS.");
+      } else {
+        setError("حدث خطأ غير متوقع أثناء تحميل البيانات: " + (err.message || "خطأ غير معروف"));
+      }
     } finally {
       setLoading(false);
     }
@@ -230,14 +257,27 @@ export default function EditAlgorithm() {
         }
       }
 
+      // رفع الصورة إذا تم اختيار صورة جديدة
+      let finalImageURL = algorithm.imageURL || "";
+      if (imageFile) {
+        setUploadPopup({ show: true, message: "جارٍ رفع الصورة...", progress: null });
+        try {
+          finalImageURL = await uploadUserImage(imageFile, algorithm.imageURL);
+          console.log("✅ [EditAlgorithm] Image uploaded:", finalImageURL);
+        } catch (err) {
+          console.error("❌ [EditAlgorithm] Image upload failed:", err);
+          throw new Error("فشل رفع الصورة: " + (err?.message || "خطأ غير معروف"));
+        }
+      }
+
       // Now update DB - show saving popup
       setUploadPopup({ show: true, message: "جارٍ حفظ البيانات على السيرفر...", progress: null });
 
-      // Prepare cleaned payload
+      // Prepare cleaned payload - حسب API الجديد PUT /api/explained-tags/{id}
       const cleanedAlgorithm = {
         ...algorithm,
-        exampleTags: (algorithm.exampleTags || []).map((e) => ({ ...e, explaineTagId: algorithm.id })),
-        youTubeLinks: (algorithm.youTubeLinks || []).map((l) => ({ ...l, explaineTagId: algorithm.id })),
+        imageURL: finalImageURL, // استخدام الصورة المرفوعة أو الحالية
+        // تحديث الفيديوهات مع الروابط المرفوعة
         videos: (algorithm.videos || []).map((v, idx) => {
           const updated = nextVideos[idx] || {};
           return {
@@ -247,9 +287,27 @@ export default function EditAlgorithm() {
             explaineTagId: algorithm.id,
           };
         }),
+        // التأكد من أن exampleTags تحتوي على explaineTagId
+        exampleTags: (algorithm.exampleTags || []).map((e) => ({ 
+          ...e, 
+          explaineTagId: algorithm.id 
+        })),
+        // التأكد من أن youTubeLinks تحتوي على explaineTagId
+        youTubeLinks: (algorithm.youTubeLinks || []).map((l) => ({ 
+          ...l, 
+          explaineTagId: algorithm.id 
+        })),
       };
 
-      await api.put(`/explained-tags/${algorithm.id}`, cleanedAlgorithm);
+      console.log("📤 [EditAlgorithm] Updating algorithm with payload:", cleanedAlgorithm);
+      
+      // استخدام updateAlgorithm من algorithmService
+      await updateAlgorithm(algorithm.id, cleanedAlgorithm);
+      
+      console.log("✅ [EditAlgorithm] Algorithm updated successfully");
+      
+      // تحديث algorithm state مع الصورة الجديدة
+      setAlgorithm({ ...cleanedAlgorithm, imageURL: finalImageURL });
 
       // Revoke previews and reset pendingFiles
       pendingFiles.forEach((p) => {
@@ -273,10 +331,29 @@ export default function EditAlgorithm() {
         type: anyErrors ? "error" : "success",
       });
     } catch (err) {
-      console.error("Save error:", err);
+      console.error("❌ [EditAlgorithm] Save error:", err);
+      console.error("❌ [EditAlgorithm] Error details:", err.response?.data || err.message);
+      
+      let errorMessage = "حدث خطأ أثناء حفظ التعديلات.";
+      
+      if (err?.response?.data) {
+        if (typeof err.response.data === "string") {
+          errorMessage = err.response.data;
+        } else if (err.response.data.message) {
+          errorMessage = err.response.data.message;
+        } else if (err.response.data.errors) {
+          const errors = Object.values(err.response.data.errors).flat();
+          errorMessage = errors.join(", ");
+        } else if (err.response.data.title) {
+          errorMessage = err.response.data.title;
+        }
+      } else if (err?.message) {
+        errorMessage = err.message;
+      }
+      
       setModal({
         show: true,
-        message: "حدث خطأ أثناء حفظ التعديلات.",
+        message: errorMessage,
         type: "error",
       });
     } finally {
@@ -396,10 +473,46 @@ export default function EditAlgorithm() {
           <label className="block font-medium">العنوان</label>
           <input
             type="text"
-            value={algorithm.title}
+            value={algorithm.title || ""}
             onChange={(e) => handleChange("title", e.target.value)}
             className="w-full border p-3 rounded"
           />
+
+          <label className="block font-medium mt-4">الوصف المختصر (مطلوب)</label>
+          <textarea 
+            value={algorithm.shortDescription || ""} 
+            onChange={(e) => handleChange("shortDescription", e.target.value)} 
+            className="w-full border p-3 rounded" 
+            rows="3"
+            placeholder="أدخل وصفاً مختصراً للخوارزمية..."
+          />
+
+          <label className="block font-medium mt-4">صورة الخوارزمية (مطلوب)</label>
+          <div className="space-y-2">
+            <input 
+              type="file" 
+              accept="image/*" 
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  setImageFile(file);
+                  const preview = URL.createObjectURL(file);
+                  setImagePreview(preview);
+                }
+              }}
+              className="w-full border p-3 rounded"
+            />
+            {imagePreview && (
+              <div className="mt-2">
+                <img src={imagePreview} alt="Preview" className="max-w-xs max-h-48 rounded border" />
+              </div>
+            )}
+            {algorithm.imageURL && !imagePreview && (
+              <div className="mt-2">
+                <img src={algorithm.imageURL} alt="Current" className="max-w-xs max-h-48 rounded border" />
+              </div>
+            )}
+          </div>
 
           <label className="block font-medium mt-4">نظرة عامة</label>
           <Editor

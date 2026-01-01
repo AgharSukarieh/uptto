@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../../../Service/api";
+import { getAlgorithmById } from "../../../Service/algorithmService";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import { Document, Packer, Paragraph, TextRun, AlignmentType } from "docx";
@@ -118,21 +119,23 @@ export default function AlgorithmDetails() {
     try {
       setLoading(true);
       setError("");
-      const token = localStorage.getItem("token");
-      const res = await api.get(`/explained-tags/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res || !res.data) throw new Error("الاستجابة من السيرفر غير صالحة.");
-      setAlgorithm(res.data);
+      console.log("🔍 [AlgorithmDetailsShow] Fetching algorithm for id:", id);
+      
+      // استخدام نفس الطريقة المستخدمة في AlgorithmDetail (للمستخدم)
+      const data = await getAlgorithmById(Number(id));
+      console.log("✅ [AlgorithmDetailsShow] Algorithm fetched:", data);
+      
+      if (!data) throw new Error("الاستجابة من السيرفر غير صالحة.");
+      setAlgorithm(data);
     } catch (err) {
-      console.error("fetch error:", err);
+      console.error("❌ [AlgorithmDetailsShow] fetch error:", err);
       if (err.response) {
         if (err.response.status === 404) setError("🚫 العنصر المطلوب غير موجود (404).");
         else setError(`⚠️ خطأ من السيرفر: ${err.response.status}`);
       } else if (err.request) {
         setError("🌐 لا يمكن الاتصال بالسيرفر. تحقق من الاتصال أو إعدادات CORS.");
       } else {
-        setError("حدث خطأ غير متوقع أثناء تحميل البيانات.");
+        setError("حدث خطأ غير متوقع أثناء تحميل البيانات: " + (err.message || "خطأ غير معروف"));
       }
     } finally {
       setLoading(false);

@@ -232,8 +232,8 @@ function handleFormSubmit() {
         return;
     }
 
-    if (password.length < 6) {
-        showAlert('كلمة السر يجب أن تكون 6 أحرف على الأقل', 'error');
+    if (password.length < 8) {
+        showAlert('كلمة السر يجب أن تكون 8 أحرف على الأقل', 'error');
         return;
     }
 

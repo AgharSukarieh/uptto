@@ -2,7 +2,8 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../../../Service/api";
 import Swal from "sweetalert2";
-import { getAllCountries } from "../../../Service/CountryService"; // استدعاء الفنكشن الجاهز
+import { getAllCountries } from "../../../Service/CountryService";
+import { getAllUniversities } from "../../../Service/UniversityService";
 import { uploadUserImage, getUserById, updateUser } from "../../../Service/userService";
 
 export default function EditUser() {
@@ -13,7 +14,8 @@ export default function EditUser() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [imageFile, setImageFile] = useState(null);
-  const [countries, setCountries] = useState([]); // قائمة الدول
+  const [countries, setCountries] = useState([]);
+  const [universities, setUniversities] = useState([]);
 
   // جلب بيانات المستخدم
   const fetchUser = async () => {
@@ -44,12 +46,25 @@ export default function EditUser() {
         throw new Error("لم يتم العثور على بيانات المستخدم");
       }
       
+      // معالجة بيانات الدولة بشكل صحيح
+      let countryId = 0;
+      if (data.country) {
+        if (typeof data.country === "object" && data.country.id) {
+          countryId = data.country.id;
+        } else if (typeof data.country === "number") {
+          countryId = data.country;
+        }
+      } else if (data.countryId) {
+        countryId = typeof data.countryId === "object" ? data.countryId?.id || 0 : data.countryId;
+      }
+
       setUser({
         id: data.id,
         email: data.email || "",
         userName: data.userName || "",
         imageURL: data.imageUrl || data.imageURL || "",
-        countryId: data.country?.id || data.countryId || 0, // الدولة مبدأياً
+        countryId: countryId,
+        universityId: data.university?.id || data.universityId || 0,
       });
     } catch (err) {
       console.error("❌ خطأ في جلب بيانات المستخدم:", err);
@@ -60,12 +75,32 @@ export default function EditUser() {
         userId: id,
       });
       
-      const errorMessage = err.message || "فشل تحميل بيانات المستخدم";
+      let errorMessage = "فشل تحميل بيانات المستخدم";
+      
+      if (err?.message) {
+        errorMessage = String(err.message);
+      } else if (err?.response?.data) {
+        const errorData = err.response.data;
+        if (typeof errorData === "string") {
+          errorMessage = errorData;
+        } else if (errorData?.message) {
+          errorMessage = String(errorData.message);
+        } else if (errorData?.error) {
+          errorMessage = String(errorData.error);
+        }
+      }
+      
+      // التأكد من أن الرسالة ليست "[object Object]"
+      if (errorMessage === "[object Object]" || errorMessage.includes("[object")) {
+        errorMessage = "فشل تحميل بيانات المستخدم. يرجى المحاولة مرة أخرى.";
+      }
+      
       Swal.fire({
         icon: "error",
         title: "❌ خطأ",
         text: errorMessage,
-        footer: err.response?.status ? `رمز الخطأ: ${err.response.status}` : "",
+        confirmButtonColor: "#007C89",
+        footer: err?.response?.status ? `رمز الخطأ: ${err.response.status}` : "",
       });
       setUser(null);
     } finally {
@@ -73,19 +108,23 @@ export default function EditUser() {
     }
   };
 
-  // جلب قائمة الدول
-  const fetchCountries = async () => {
+  // جلب قائمة الدول والجامعات
+  const fetchData = async () => {
     try {
-      const data = await getAllCountries();
-      setCountries(data || []);
+      const [countriesData, universitiesData] = await Promise.all([
+        getAllCountries(),
+        getAllUniversities(),
+      ]);
+      setCountries(countriesData || []);
+      setUniversities(universitiesData || []);
     } catch (err) {
-      console.error("خطأ في جلب قائمة الدول:", err);
+      console.error("خطأ في جلب البيانات:", err);
     }
   };
 
   useEffect(() => {
     fetchUser();
-    fetchCountries();
+    fetchData();
   }, [id]);
 
   // رفع الصورة
@@ -104,37 +143,54 @@ export default function EditUser() {
     setSaving(true);
 
     try {
-      let imageUrl = user.imageURL || "";
-
-      if (imageFile) {
-        imageUrl = await uploadUserImage(imageFile);
-      }
-
-      // التحقق من البيانات قبل الإرسال
-      if (!user.email || !user.userName) {
+      // التحقق من البيانات قبل الإرسال (نفس منطق EditProfile)
+      if (!user.email || !user.userName || !user.countryId) {
         Swal.fire({
           icon: "warning",
           title: "⚠️ تحذير",
-          text: "الرجاء إدخال البريد الإلكتروني واسم المستخدم",
+          text: "الرجاء تعبئة جميع الحقول المطلوبة",
+          confirmButtonColor: "#007C89"
         });
         setSaving(false);
         return;
       }
 
+      if (!user.email.includes("@")) {
+        Swal.fire({
+          icon: "warning",
+          title: "⚠️ تحذير",
+          text: "الرجاء إدخال بريد إلكتروني صحيح يحتوي على @",
+          confirmButtonColor: "#007C89"
+        });
+        setSaving(false);
+        return;
+      }
+
+      let imageURL = user.imageURL || "";
+      
+      // رفع الصورة إذا كانت موجودة (نفس منطق EditProfile)
+      if (imageFile) {
+        imageURL = await uploadUserImage(imageFile, user.imageURL);
+      }
+
+      // بناء payload بنفس طريقة EditProfile
       const payload = {
+        id: user.id,
         email: user.email.trim(),
         userName: user.userName.trim(),
-        imageURL: imageUrl || "",
-        countryId: Number(user.countryId) || 0,
-        universityId: 0, // إضافة universityId بقيمة افتراضية
+        imageURL: imageURL || "",
+        countryId: parseInt(user.countryId) || 0,
+        universityId: parseInt(user.universityId) || 0,
+        otp: "", // للأدمن لا نحتاج OTP
       };
 
       console.log("📤 Submitting user update:", {
         userId: user.id,
-        payload: JSON.stringify(payload, null, 2),
+        payload: payload,
       });
 
-      await updateUser(user.id, payload);
+      // استخدام updateUser بنفس طريقة EditProfile
+      await updateUser(payload);
 
       Swal.fire({
         icon: "success",
@@ -153,25 +209,70 @@ export default function EditUser() {
       // استخراج رسالة الخطأ بشكل صحيح
       let errorMessage = "حدث خطأ أثناء تعديل المستخدم";
       
-      if (err.message) {
-        errorMessage = err.message;
-      } else if (err.response?.data) {
-        if (typeof err.response.data === "string") {
-          errorMessage = err.response.data;
-        } else if (err.response.data.message) {
-          errorMessage = err.response.data.message;
-        } else if (err.response.data.error) {
-          errorMessage = err.response.data.error;
-        } else {
-          errorMessage = JSON.stringify(err.response.data);
+      if (err?.message) {
+        errorMessage = String(err.message);
+      } else if (err?.response?.data) {
+        const errorData = err.response.data;
+        
+        if (typeof errorData === "string") {
+          errorMessage = errorData;
+        } else if (errorData?.message) {
+          errorMessage = String(errorData.message);
+        } else if (errorData?.error) {
+          errorMessage = String(errorData.error);
+        } else if (errorData?.errors) {
+          // معالجة أخطاء validation
+          if (Array.isArray(errorData.errors)) {
+            errorMessage = errorData.errors.join(", ");
+          } else if (typeof errorData.errors === "object") {
+            const errorMessages = Object.values(errorData.errors)
+              .flat()
+              .map(e => String(e))
+              .filter(e => e && e !== "[object Object]");
+            errorMessage = errorMessages.length > 0 
+              ? errorMessages.join(", ") 
+              : "حدث خطأ في التحقق من البيانات";
+          } else {
+            errorMessage = String(errorData.errors);
+          }
+        } else if (typeof errorData === "object") {
+          // محاولة استخراج رسالة من الكائن
+          const possibleMessages = [
+            errorData.title,
+            errorData.detail,
+            errorData.Message,
+            errorData.Error,
+          ].filter(Boolean);
+          
+          if (possibleMessages.length > 0) {
+            errorMessage = String(possibleMessages[0]);
+          } else {
+            // كحل أخير، استخدم JSON لكن مع معالجة
+            try {
+              const jsonStr = JSON.stringify(errorData, null, 2);
+              if (jsonStr && jsonStr !== "{}" && !jsonStr.includes("[object")) {
+                errorMessage = jsonStr;
+              } else {
+                errorMessage = "حدث خطأ غير معروف. يرجى المحاولة مرة أخرى.";
+              }
+            } catch {
+              errorMessage = "حدث خطأ غير معروف. يرجى المحاولة مرة أخرى.";
+            }
+          }
         }
+      }
+      
+      // التأكد من أن الرسالة ليست "[object Object]"
+      if (errorMessage === "[object Object]" || errorMessage.includes("[object")) {
+        errorMessage = "حدث خطأ أثناء تعديل المستخدم. يرجى التحقق من البيانات والمحاولة مرة أخرى.";
       }
       
       Swal.fire({
         icon: "error",
         title: "❌ خطأ",
         text: errorMessage,
-        footer: err.response?.status ? `رمز الخطأ: ${err.response.status}` : "",
+        confirmButtonColor: "#007C89",
+        footer: err?.response?.status ? `رمز الخطأ: ${err.response.status}` : "",
       });
     } finally {
       setSaving(false);
@@ -244,23 +345,48 @@ export default function EditUser() {
           />
         </div>
 
-        {/* الدولة */}
-        <div>
-          <label className="block font-semibold mb-1">الدولة</label>
-          <select
-            value={user.countryId || 0}
-            onChange={(e) =>
-              setUser({ ...user, countryId: Number(e.target.value) })
-            }
-            className="w-full border p-2 rounded-md"
-          >
-            <option value={0}>اختر الدولة</option>
-            {countries.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.nameCountry}
-              </option>
-            ))}
-          </select>
+        {/* الدولة والجامعة */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block font-semibold mb-1">الدولة</label>
+            <select
+              value={user.countryId || 0}
+              onChange={(e) =>
+                setUser({ ...user, countryId: Number(e.target.value) })
+              }
+              className="w-full border p-2 rounded-md"
+            >
+              <option value={0}>اختر الدولة</option>
+              {countries.map((c) => {
+                const countryName = c?.nameCountry || c?.name || String(c?.id || "");
+                return (
+                  <option key={c.id} value={c.id}>
+                    {countryName}
+                  </option>
+                );
+              })}
+            </select>
+          </div>
+          <div>
+            <label className="block font-semibold mb-1">الجامعة (اختياري)</label>
+            <select
+              value={user.universityId || 0}
+              onChange={(e) =>
+                setUser({ ...user, universityId: Number(e.target.value) })
+              }
+              className="w-full border p-2 rounded-md"
+            >
+              <option value={0}>اختر الجامعة</option>
+              {universities.map((u) => {
+                const universityName = u?.name || String(u?.id || "");
+                return (
+                  <option key={u.id} value={u.id}>
+                    {universityName}
+                  </option>
+                );
+              })}
+            </select>
+          </div>
         </div>
 
         <div className="flex justify-between mt-6">

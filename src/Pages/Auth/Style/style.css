@@ -2325,18 +2325,13 @@ input[type="text"]:focus {
   color: #333 !important;
   border-color: #e5e7eb !important;
 }
-
 .dark-mode .illustration-section {
   background: inherit !important;
 }
 
 .dark-mode .landing-header--auth,
 .dark-mode .landing-header--auth * {
-  background: linear-gradient(
-    180deg,
-    var(--landing-primary) 0%,
-    var(--landing-primary-dark) 100%
-  ) !important;
+ 
   color: inherit !important;
 }
 
@@ -2349,3 +2344,4 @@ input[type="text"]:focus {
 .dark-mode .landing-footer--auth .landing-footer__nav a {
   color: #fff !important;
 }
+

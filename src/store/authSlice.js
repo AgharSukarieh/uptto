@@ -91,6 +91,20 @@ const authSlice = createSlice({
       localStorage.removeItem("role");
       localStorage.removeItem("auth-user");
       localStorage.removeItem("auth-session");
+      
+      // إعادة الوضع إلى اللايت مود عند تسجيل الخروج
+      localStorage.setItem("dark-mode", "false");
+      localStorage.setItem("admin-theme", "light");
+      
+      // إزالة dark-mode من document
+      if (typeof document !== "undefined") {
+        document.documentElement.classList.remove("dark-mode");
+        document.body.classList.remove("dark-mode");
+        
+        // إزالة dark-mode من جميع العناصر
+        const allElements = document.querySelectorAll(".dark-mode");
+        allElements.forEach((el) => el.classList.remove("dark-mode"));
+      }
     },
   },
 });

@@ -222,26 +222,70 @@ export default function EditProblem() {
         tags: selectedTags
       };
 
-      await api.put(`/problems/${problem.id}`, payload);
+      console.log("📤 Updating problem with ID:", problem.id);
+      console.log("📤 Payload:", payload);
+      
+      const response = await api.put(`/api/problems/${problem.id}`, payload, {
+        headers: {
+          "Content-Type": "application/json",
+          accept: "*/*",
+        },
+      });
+      console.log("✅ Update response:", response);
 
       Swal.fire({
         icon: "success",
         title: "✅ تم تحديث المسألة",
         text: "تم حفظ التعديلات بنجاح!",
-        confirmButtonText: "حسنًا",
+        confirmButtonColor: "#007C89",
+        timer: 3000
       }).then(() => navigate("/react-app/admin/Problem-List"));
 
     } catch (error) {
-      console.error("خطأ أثناء تحديث المسألة:", error);
-      let errorMsg = "❌ حدث خطأ أثناء تحديث المسألة";
-      if (error.response?.data) {
-        errorMsg += `: ${JSON.stringify(error.response.data)}`;
+      console.error("❌ خطأ أثناء تحديث المسألة:", error);
+      console.error("❌ تفاصيل الخطأ:", {
+        status: error?.response?.status,
+        statusText: error?.response?.statusText,
+        data: error?.response?.data,
+        message: error?.message,
+        url: error?.config?.url,
+        method: error?.config?.method,
+      });
+      
+      let errorMessage = "حدث خطأ أثناء تحديث المسألة.";
+      
+      if (error?.response?.data) {
+        if (typeof error.response.data === "string") {
+          errorMessage = error.response.data;
+        } else if (error.response.data.message) {
+          errorMessage = error.response.data.message;
+        } else if (error.response.data.errors) {
+          const errors = Object.values(error.response.data.errors).flat();
+          errorMessage = errors.join(", ");
+        } else if (error.response.data.title) {
+          errorMessage = `خطأ في العنوان: ${error.response.data.title}`;
+        } else {
+          errorMessage = JSON.stringify(error.response.data);
+        }
+      } else if (error?.message) {
+        errorMessage = error.message;
       }
+      
+      if (error?.response?.status === 401) {
+        errorMessage = "غير مصرح لك. يرجى تسجيل الدخول مرة أخرى.";
+      } else if (error?.response?.status === 403) {
+        errorMessage = "ليس لديك صلاحية لتعديل هذه المسألة";
+      } else if (error?.response?.status === 404) {
+        errorMessage = "المسألة غير موجودة";
+      } else if (error?.response?.status === 400) {
+        errorMessage = errorMessage || "البيانات المرسلة غير صحيحة";
+      }
+      
       Swal.fire({
         icon: "error",
-        title: "خطأ",
-        text: errorMsg,
-        confirmButtonText: "حسنًا",
+        title: "خطأ في تحديث المسألة",
+        text: errorMessage,
+        confirmButtonColor: "#007C89"
       });
     } finally {
       setSaving(false);

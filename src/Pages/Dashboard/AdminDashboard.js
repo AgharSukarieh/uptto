@@ -1,5 +1,6 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useContext } from "react";
 import { useNavigate, useLocation, Outlet } from "react-router-dom";
+import { useDispatch } from "react-redux";
 import {
   Users,
   FileQuestion,
@@ -32,7 +33,7 @@ import {
 import { getGeneralStats } from "../../Service/generalService";
 import { UserContext } from "../../Hook/UserContext";
 import { useTheme } from "../../Hook/ThemeContext";
-import { useContext } from "react";
+import { clearCredentials } from "../../store/authSlice";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Chart as ChartJS,
@@ -60,6 +61,7 @@ ChartJS.register(
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const dispatch = useDispatch();
   const { user, setUser } = useContext(UserContext);
   const { theme, toggleTheme, isDark } = useTheme();
   const [stats, setStats] = useState(null);
@@ -406,12 +408,24 @@ const AdminDashboard = () => {
   );
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("idUser");
-    localStorage.removeItem("role");
-    localStorage.removeItem("userName");
-    localStorage.removeItem("user");
+    // إعادة الوضع إلى اللايت مود عند تسجيل الخروج
+    localStorage.setItem("admin-theme", "light");
+    localStorage.setItem("dark-mode", "false");
+    
+    // إزالة dark-mode من document
+    if (typeof document !== "undefined") {
+      document.documentElement.classList.remove("dark-mode");
+      document.body.classList.remove("dark-mode");
+      
+      // إزالة dark-mode من جميع العناصر
+      const allElements = document.querySelectorAll(".dark-mode");
+      allElements.forEach((el) => el.classList.remove("dark-mode"));
+    }
+    
+    // تنظيف بيانات المستخدم
+    dispatch(clearCredentials());
     setUser(null);
+    
     navigate("/login");
   };
 

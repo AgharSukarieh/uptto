@@ -4,6 +4,7 @@ import { getAllTags } from "../../../Service/TagServices";
 import { getAllContests } from "../../../Service/contestService";
 import api from "../../../Service/api";
 import { Editor } from "@tinymce/tinymce-react";
+import Swal from "sweetalert2";
 import {
   PlusCircle,
   Upload,
@@ -93,6 +94,38 @@ export default function AddProblem() {
   // الإرسال
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // التحقق من الحقول المطلوبة
+    if (!problem.title || !problem.title.trim()) {
+      Swal.fire({
+        icon: "warning",
+        title: "حقل مطلوب",
+        text: "الرجاء إدخال عنوان المسألة",
+        confirmButtonColor: "#007C89"
+      });
+      return;
+    }
+    
+    if (!problem.descriptionProblem || !problem.descriptionProblem.trim()) {
+      Swal.fire({
+        icon: "warning",
+        title: "حقل مطلوب",
+        text: "الرجاء إدخال وصف المسألة",
+        confirmButtonColor: "#007C89"
+      });
+      return;
+    }
+    
+    if (!problem.difficulty) {
+      Swal.fire({
+        icon: "warning",
+        title: "حقل مطلوب",
+        text: "الرجاء اختيار مستوى الصعوبة",
+        confirmButtonColor: "#007C89"
+      });
+      return;
+    }
+    
     setLoading(true);
     try {
       let imageURL = "";
@@ -100,16 +133,41 @@ export default function AddProblem() {
         imageURL = await uploadUserImage(imageFile);
       }
 
+      // تنظيف البيانات قبل الإرسال
       const dataToSend = {
-        ...problem,
-        imageURL,
+        title: problem.title.trim(),
+        descriptionProblem: problem.descriptionProblem.trim(),
+        descriptionInput: problem.descriptionInput?.trim() || "",
+        descriptionOutput: problem.descriptionOutput?.trim() || "",
+        authorNotes: problem.authorNotes?.trim() || "",
+        difficulty: problem.difficulty,
+        memory: parseInt(problem.memory) || 0,
+        time: parseInt(problem.time) || 0,
+        imageURL: imageURL || "",
         idUser: parseInt(localStorage.getItem("idUser")),
         contestId: problem.contestId ? parseInt(problem.contestId) : null,
+        testCase: problem.testCase || [],
+        tags: Array.isArray(problem.tags) ? problem.tags : [],
+        solution: problem.solution?.trim() || "",
       };
 
       // ارسال الحقل الجديد "solution" ضمن بيانات المسألة
-      await api.post("/api/problems", dataToSend);
-      alert("✅ تم إضافة المسألة بنجاح!");
+      console.log("📤 Sending problem data:", dataToSend);
+      const response = await api.post("/api/problems", dataToSend, {
+        headers: {
+          "Content-Type": "application/json",
+          accept: "*/*",
+        },
+      });
+      console.log("✅ Response:", response);
+      
+      Swal.fire({
+        icon: "success",
+        title: "تم إضافة المسألة بنجاح!",
+        text: "تم إضافة المسألة بنجاح 🎉",
+        confirmButtonColor: "#007C89",
+        timer: 3000
+      });
 
       setProblem({
         title: "",
@@ -129,7 +187,38 @@ export default function AddProblem() {
       setImageFile(null);
     } catch (error) {
       console.error("❌ خطأ أثناء الإرسال:", error);
-      alert("حدث خطأ أثناء إضافة المسألة.");
+      console.error("❌ تفاصيل الخطأ:", {
+        status: error?.response?.status,
+        statusText: error?.response?.statusText,
+        data: error?.response?.data,
+        message: error?.message,
+      });
+      
+      let errorMessage = "حدث خطأ أثناء إضافة المسألة.";
+      
+      if (error?.response?.data) {
+        if (typeof error.response.data === "string") {
+          errorMessage = error.response.data;
+        } else if (error.response.data.message) {
+          errorMessage = error.response.data.message;
+        } else if (error.response.data.errors) {
+          const errors = Object.values(error.response.data.errors).flat();
+          errorMessage = errors.join(", ");
+        } else if (error.response.data.title) {
+          errorMessage = `خطأ في العنوان: ${error.response.data.title}`;
+        } else {
+          errorMessage = JSON.stringify(error.response.data);
+        }
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+      
+      Swal.fire({
+        icon: "error",
+        title: "خطأ في إضافة المسألة",
+        text: errorMessage,
+        confirmButtonColor: "#007C89"
+      });
     } finally {
       setLoading(false);
     }

@@ -47,6 +47,22 @@
   color: var(--admin-text-primary) !important;
 }
 
+/* الأيقونات في dashboard-home__quick-actions - نفس لون الكارت (الهيدر) */
+.dark-mode .dashboard-home__header .dashboard-home__quick-actions .dashboard-home__icon,
+.dark-mode .dashboard-home__header .dashboard-home__quick-actions button {
+  background: var(--admin-bg-secondary) !important;
+  background-color: var(--admin-bg-secondary) !important;
+  color: var(--admin-text-primary) !important;
+  border-color: var(--admin-border-color) !important;
+}
+
+.dark-mode .dashboard-home__header .dashboard-home__quick-actions .dashboard-home__icon:hover,
+.dark-mode .dashboard-home__header .dashboard-home__quick-actions button:hover {
+  background: var(--admin-bg-tertiary) !important;
+  background-color: var(--admin-bg-tertiary) !important;
+  color: var(--admin-text-primary) !important;
+}
+
 .dashboard-home__header.landing-header {
   background: #ffffff;
   clip-path: none;

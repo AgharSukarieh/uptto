@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { Eye, Edit, Trash, Plus, ArrowLeft } from "lucide-react";
-import { getExplaineTagsByTagId } from "../../../Service/TagServices";
-import api from "../../../Service/api";
+import { getAlgorithmsByTag, deleteAlgorithm as deleteAlgorithmService } from "../../../Service/algorithmService";
 import { useParams, useNavigate } from "react-router-dom";
+import Swal from "sweetalert2";
 
 export default function AlgorithmsAdmin() {
   const { id: tagId } = useParams();
@@ -22,42 +22,82 @@ export default function AlgorithmsAdmin() {
     try {
       setLoading(true);
       setError("");
-      console.log("🔍 Fetching algorithms for tagId:", tagId);
+      console.log("🔍 [AlgorithmsAdmin] Fetching algorithms for tagId:", tagId);
       
-      // استخدام خدمة التاجات
-      const data = await getExplaineTagsByTagId(tagId);
-      console.log("✅ Algorithms fetched:", data);
+      // استخدام API الجديد مباشرة: GET /api/explained-tags/by-tag/{tagId}
+      const data = await getAlgorithmsByTag(Number(tagId));
+      console.log("✅ [AlgorithmsAdmin] Algorithms fetched:", data);
+      console.log("✅ [AlgorithmsAdmin] Data type:", typeof data, "Is Array:", Array.isArray(data));
+      console.log("✅ [AlgorithmsAdmin] Data length:", Array.isArray(data) ? data.length : "N/A");
       
-      // معالجة البيانات - قد تكون مصفوفة أو كائن
+      // البيانات يجب أن تكون مصفوفة من getAlgorithmsByTag
       if (Array.isArray(data)) {
+        console.log(`✅ [AlgorithmsAdmin] Setting ${data.length} algorithms`);
         setAlgorithms(data);
-      } else if (data?.data && Array.isArray(data.data)) {
-        setAlgorithms(data.data);
-      } else if (data?.items && Array.isArray(data.items)) {
-        setAlgorithms(data.items);
       } else {
-        console.warn("⚠️ Unexpected data format:", data);
+        console.warn("⚠️ [AlgorithmsAdmin] Unexpected data format:", data);
         setAlgorithms([]);
       }
     } catch (err) {
-      console.error("❌ Error fetching algorithms:", err);
+      console.error("❌ [AlgorithmsAdmin] Error fetching algorithms:", err);
       setError("حدث خطأ أثناء جلب البيانات: " + (err.message || "خطأ غير معروف"));
+      setAlgorithms([]);
     } finally {
       setLoading(false);
     }
   };
 
   const deleteAlgorithm = async (id) => {
-    if (!window.confirm("هل أنت متأكد أنك تريد حذف هذه الخوارزمية؟")) return;
+    const result = await Swal.fire({
+      title: "هل أنت متأكد؟",
+      text: "لن تتمكن من التراجع عن هذه العملية!",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "نعم، احذفه!",
+      cancelButtonText: "إلغاء",
+      confirmButtonColor: "#dc2626",
+      cancelButtonColor: "#6b7280",
+    });
+
+    if (!result.isConfirmed) return;
+
     try {
-      const token = localStorage.getItem("token");
-      await api.delete(`/explained-tags/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      console.log("🗑️ [AlgorithmsAdmin] Deleting algorithm with id:", id);
+      await deleteAlgorithmService(Number(id));
+      console.log("✅ [AlgorithmsAdmin] Algorithm deleted successfully");
+      
+      // إزالة الخوارزمية من القائمة
       setAlgorithms(algorithms.filter((algo) => algo.id !== id));
+      
+      Swal.fire({
+        title: "تم الحذف!",
+        text: "تم حذف الخوارزمية بنجاح",
+        icon: "success",
+        confirmButtonColor: "#7c3aed",
+      });
     } catch (err) {
-      console.error(err);
-      alert("حدث خطأ أثناء الحذف.");
+      console.error("❌ [AlgorithmsAdmin] Error deleting algorithm:", err);
+      let errorMessage = "حدث خطأ أثناء الحذف.";
+      
+      if (err?.response?.data) {
+        if (typeof err.response.data === "string") {
+          errorMessage = err.response.data;
+        } else if (err.response.data.message) {
+          errorMessage = err.response.data.message;
+        } else if (err.response.data.errors) {
+          const errors = Object.values(err.response.data.errors).flat();
+          errorMessage = errors.join(", ");
+        }
+      } else if (err?.message) {
+        errorMessage = err.message;
+      }
+      
+      Swal.fire({
+        title: "فشل الحذف",
+        text: errorMessage,
+        icon: "error",
+        confirmButtonColor: "#dc2626",
+      });
     }
   };
 

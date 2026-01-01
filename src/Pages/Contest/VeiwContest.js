@@ -28,6 +28,7 @@ import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import QuestionAnswerIcon from "@mui/icons-material/QuestionAnswer";
 import EventBusyIcon from "@mui/icons-material/EventBusy";
 import Swal from "sweetalert2";
+import ContestLeaderboard from "./ContestLeaderboard";
 import "./VeiwContest.css";
 
 // Ensure boxicons is loaded
@@ -56,6 +57,7 @@ export default function ContestProblems() {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [isRegistered, setIsRegistered] = useState(false);
   const [registering, setRegistering] = useState(false);
+  const [now, setNow] = useState(new Date());
   const [expandedSections, setExpandedSections] = useState({
     info: true,
     prizes: false,
@@ -88,6 +90,14 @@ export default function ContestProblems() {
     });
     
     return () => observer.disconnect();
+  }, []);
+
+  // Update current time every second for countdown
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setNow(new Date());
+    }, 1000);
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
@@ -278,6 +288,66 @@ export default function ContestProblems() {
     }
   };
 
+  const formatDateTime = (dateString) => {
+    if (!dateString) return "غير محدد";
+    try {
+      const d = new Date(dateString);
+      const day = d.getDate().toString().padStart(2, '0');
+      const month = (d.getMonth() + 1).toString().padStart(2, '0');
+      const year = d.getFullYear();
+      const hours = d.getHours().toString().padStart(2, '0');
+      const minutes = d.getMinutes().toString().padStart(2, '0');
+      return `${day}/${month}/${year} ${hours}:${minutes}`;
+    } catch (error) {
+      return "تاريخ غير صحيح";
+    }
+  };
+
+  // Calculate countdown timer
+  const getCountdown = (targetDate) => {
+    if (!targetDate) return null;
+    try {
+      const target = new Date(targetDate);
+      const diff = target - now;
+      
+      if (diff <= 0) return "انتهت";
+      
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+      const minutes = Math.floor((diff / (1000 * 60)) % 60);
+      const seconds = Math.floor((diff / 1000) % 60);
+      
+      if (days > 0) {
+        return `${days} يوم ${hours} ساعة ${minutes} دقيقة ${seconds} ثانية`;
+      } else if (hours > 0) {
+        return `${hours} ساعة ${minutes} دقيقة ${seconds} ثانية`;
+      } else if (minutes > 0) {
+        return `${minutes} دقيقة ${seconds} ثانية`;
+      } else {
+        return `${seconds} ثانية`;
+      }
+    } catch (error) {
+      return "خطأ في الحساب";
+    }
+  };
+
+  // Get contest status
+  const getContestStatus = () => {
+    if (!contest) return null;
+    const startTime = contest.startTime ? new Date(contest.startTime) : null;
+    const endTime = contest.endTime ? new Date(contest.endTime) : null;
+    
+    if (!startTime || !endTime) return null;
+    
+    if (now < startTime) {
+      return { label: "لم تبدأ بعد", color: "#2196F3", bgcolor: "#E3F2FD" };
+    } else if (now >= startTime && now <= endTime) {
+      return { label: "نشط الآن", color: "#4CAF50", bgcolor: "#E8F5E9" };
+    } else {
+      return { label: "منتهية", color: "#9E9E9E", bgcolor: "#F5F5F5" };
+    }
+  };
+
   const getDifficultyColor = (difficulty) => {
     switch (difficulty?.toLowerCase()) {
       case "easy":
@@ -427,6 +497,58 @@ export default function ContestProblems() {
     }
   };
 
+  // Handle problem click - check registration and start time before navigation
+  const handleProblemClick = async (problemId) => {
+    const contestId = parseInt(id, 10);
+    if (!contestId || isNaN(contestId) || contestId <= 0) {
+      return;
+    }
+
+    // Check if user is registered
+    if (!isRegistered) {
+      Swal.fire({
+        icon: "warning",
+        title: "يجب التسجيل أولاً",
+        text: "يجب أن تكون مسجلاً في المسابقة للوصول إلى هذه المسألة",
+        confirmButtonText: "موافق",
+        confirmButtonColor: "#007C89",
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        showCancelButton: false
+      });
+      return;
+    }
+
+    // Check if contest has started
+    if (contest && contest.startTime) {
+      const startTime = new Date(contest.startTime);
+      const now = new Date();
+      
+      if (now < startTime) {
+        Swal.fire({
+          icon: "info",
+          title: "المسابقة لم تبدأ بعد",
+          text: "لا يمكنك الوصول إلى المسائل حتى تبدأ المسابقة",
+          confirmButtonText: "موافق",
+          confirmButtonColor: "#007C89",
+          allowOutsideClick: false,
+          allowEscapeKey: false,
+          showCancelButton: false
+        });
+        return;
+      }
+    }
+
+    // If all checks pass, navigate to problem
+    navigate(`/problem/${problemId}`, { 
+      state: { 
+        fromContest: true, 
+        contestId: contestId,
+        contestName: contest.name
+      } 
+    });
+  };
+
   return (
     <div className="contest-detail-wrapper" style={{ direction: "rtl" }}>
       {/* Header */}
@@ -457,6 +579,120 @@ export default function ContestProblems() {
         )}
 
         <Container maxWidth="lg" className="contest-detail-content" sx={{ py: 4 }}>
+          {/* Main Content - Full Width */}
+          <Box sx={{ 
+            width: "100%"
+          }}>
+          {/* Contest Time Information Card */}
+          {(contest.startTime || contest.endTime) && (
+            <Card className="contest-section-card" sx={{ 
+              mb: 2,
+              borderRadius: 2,
+              backgroundColor: "var(--admin-bg-secondary, #ffffff)",
+              color: "var(--admin-text-primary, #1a202c)",
+              boxShadow: "var(--admin-shadow-color, rgba(0,0,0,0.1)) 0 2px 8px",
+              border: "1px solid var(--admin-border-color, rgba(226, 232, 240, 0.8))",
+              overflow: "hidden"
+            }}>
+              <Box sx={{ p: 3 }}>
+                <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                  {/* Status Badge */}
+                  {getContestStatus() && (
+                    <Box sx={{ 
+                      display: "flex", 
+                      justifyContent: "center",
+                      mb: 1
+                    }}>
+                      <Chip
+                        label={getContestStatus().label}
+                        sx={{
+                          bgcolor: getContestStatus().bgcolor,
+                          color: getContestStatus().color,
+                          fontWeight: "bold",
+                          fontSize: "0.9rem",
+                          px: 2,
+                          py: 0.5
+                        }}
+                      />
+                    </Box>
+                  )}
+
+                  {/* Start Time */}
+                  {contest.startTime && (
+                    <Box sx={{ 
+                      display: "flex", 
+                      flexDirection: "column",
+                      alignItems: "center",
+                      p: 2,
+                      borderRadius: 2,
+                      bgcolor: "var(--admin-bg-tertiary, #f5f7fa)"
+                    }}>
+                      <Typography variant="caption" sx={{ 
+                        color: "var(--admin-text-secondary, #6b7280)",
+                        mb: 0.5,
+                        fontWeight: "bold"
+                      }}>
+                        تاريخ البداية
+                      </Typography>
+                      <Typography variant="h6" sx={{ 
+                        color: "var(--admin-text-primary, #1a202c)",
+                        fontWeight: "bold",
+                        fontFamily: "monospace"
+                      }}>
+                        {formatDateTime(contest.startTime)}
+                      </Typography>
+                      {now < new Date(contest.startTime) && (
+                        <Typography variant="body2" sx={{ 
+                          color: "#2196F3",
+                          mt: 1,
+                          fontWeight: "500"
+                        }}>
+                          الوقت المتبقي للبداية: {getCountdown(contest.startTime)}
+                        </Typography>
+                      )}
+                    </Box>
+                  )}
+
+                  {/* End Time */}
+                  {contest.endTime && (
+                    <Box sx={{ 
+                      display: "flex", 
+                      flexDirection: "column",
+                      alignItems: "center",
+                      p: 2,
+                      borderRadius: 2,
+                      bgcolor: "var(--admin-bg-tertiary, #f5f7fa)"
+                    }}>
+                      <Typography variant="caption" sx={{ 
+                        color: "var(--admin-text-secondary, #6b7280)",
+                        mb: 0.5,
+                        fontWeight: "bold"
+                      }}>
+                        تاريخ النهاية
+                      </Typography>
+                      <Typography variant="h6" sx={{ 
+                        color: "var(--admin-text-primary, #1a202c)",
+                        fontWeight: "bold",
+                        fontFamily: "monospace"
+                      }}>
+                        {formatDateTime(contest.endTime)}
+                      </Typography>
+                      {now < new Date(contest.endTime) && now >= (contest.startTime ? new Date(contest.startTime) : new Date(0)) && (
+                        <Typography variant="body2" sx={{ 
+                          color: "#4CAF50",
+                          mt: 1,
+                          fontWeight: "500"
+                        }}>
+                          الوقت المتبقي للنهاية: {getCountdown(contest.endTime)}
+                        </Typography>
+                      )}
+                    </Box>
+                  )}
+                </Box>
+              </Box>
+            </Card>
+          )}
+
           {/* Contest Information Section - Collapsible */}
           <Card className="contest-section-card" sx={{ 
             mb: 2,
@@ -571,24 +807,6 @@ export default function ContestProblems() {
                     </Typography>
                   </Box>
 
-                  {contest.startTime && (
-                    <Box className="contest-info-item">
-                      <Typography variant="caption" sx={{ 
-                        color: "var(--admin-text-secondary, #6b7280)",
-                        display: "block",
-                        mb: 0.5,
-                        fontWeight: "bold"
-                      }}>
-                        تاريخ المسابقة
-                      </Typography>
-                      <Typography variant="body1" sx={{ 
-                        color: "var(--admin-text-primary, #1a202c)",
-                        fontWeight: "500"
-                      }}>
-                        {formatDate(contest.startTime)}
-                      </Typography>
-                    </Box>
-                  )}
 
                   {contest.difficultyLevel !== undefined && contest.difficultyLevel !== null && (
                     <Box className="contest-info-item">
@@ -939,13 +1157,7 @@ export default function ContestProblems() {
                       <Card
                         key={problem.id}
                         className="problem-card-item"
-                        onClick={() => navigate(`/problem/${problem.id}`, { 
-                          state: { 
-                            fromContest: true, 
-                            contestId: id,
-                            contestName: contest.name
-                          } 
-                        })}
+                        onClick={() => handleProblemClick(problem.id)}
                         sx={{
                           p: 2.5,
                           borderRadius: 2,
@@ -1035,6 +1247,15 @@ export default function ContestProblems() {
               </Box>
             </Collapse>
           </Card>
+          </Box>
+
+          {/* Leaderboard - Below Content */}
+          <Box sx={{ 
+            mt: 4,
+            width: "100%"
+          }}>
+            <ContestLeaderboard contestId={id} />
+          </Box>
 
           {/* Register Button - At the end of page */}
           <Box className="contest-register-section" sx={{ 

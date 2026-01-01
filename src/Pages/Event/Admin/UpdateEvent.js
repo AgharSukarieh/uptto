@@ -171,18 +171,65 @@ export default function UpdateEvent() {
 
     setSaving(true);
     try {
-      await api.put(`/events/${encodeURIComponent(form.id)}`, payload, {
-        headers: { "Content-Type": "application/json" },
-      });
+      console.log("📤 [UpdateEvent] Updating event with ID:", form.id);
+      console.log("📤 [UpdateEvent] Payload:", payload);
+      
+      // محاولة endpoints مختلفة
+      let response;
+      try {
+        // محاولة /api/events/{id} أولاً
+        response = await api.put(`/api/events/${encodeURIComponent(form.id)}`, payload, {
+          headers: { 
+            "Content-Type": "application/json",
+            accept: "*/*",
+          },
+        });
+        console.log("✅ [UpdateEvent] Event updated successfully via /api/events/:", response.data);
+      } catch (err) {
+        if (err.response?.status === 404) {
+          // إذا كان 404، جرب /events/{id}
+          console.log("⚠️ [UpdateEvent] /api/events/ returned 404, trying /events/");
+          response = await api.put(`/events/${encodeURIComponent(form.id)}`, payload, {
+            headers: { 
+              "Content-Type": "application/json",
+              accept: "*/*",
+            },
+          });
+          console.log("✅ [UpdateEvent] Event updated successfully via /events/:", response.data);
+        } else {
+          throw err;
+        }
+      }
+      
       setSuccess("تم حفظ التعديلات بنجاح. جاري التحويل لصفحة العرض...");
       // بعد نجاح الحفظ ننتظر لحظات ثم ننقله لصفحة العرض
       redirectTimeoutRef.current = setTimeout(() => {
-        // عدّل المسار حسب صفحة العرض في مشروعك، مثلاً /events/:id أو /events/:id/view
         navigate(`/react-app/admin/event/${form.id}`);
       }, 1000);
     } catch (err) {
-      console.error(err);
-      setError("فشل حفظ التعديلات: " + (err.response?.data || err.message));
+      console.error("❌ [UpdateEvent] Error updating event:", err);
+      console.error("❌ [UpdateEvent] Error response:", err?.response);
+      console.error("❌ [UpdateEvent] Error status:", err?.response?.status);
+      console.error("❌ [UpdateEvent] Error URL:", err?.config?.url);
+      
+      let errorMessage = "فشل حفظ التعديلات.";
+      
+      if (err?.response?.data) {
+        if (typeof err.response.data === "string") {
+          errorMessage = err.response.data;
+        } else if (err.response.data.message) {
+          errorMessage = err.response.data.message;
+        } else if (err.response.data.errors) {
+          const errors = Object.values(err.response.data.errors).flat();
+          errorMessage = errors.join(", ");
+        } else if (err.response.data.title) {
+          errorMessage = err.response.data.title;
+        }
+      } else if (err?.message) {
+        errorMessage = err.message;
+      }
+      
+      setError(errorMessage);
     } finally {
       setSaving(false);
     }

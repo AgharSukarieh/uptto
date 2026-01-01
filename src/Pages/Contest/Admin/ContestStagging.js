@@ -42,50 +42,92 @@ export default function ContestStagging() {
     }
   };
 
-  // جلب ترتيب المسابقة (Standings/Leaderboard)
+  // جلب ترتيب المسابقة (Stages)
   const fetchStandings = async () => {
-    if (!id) return;
+    if (!id) {
+      setError("معرف المسابقة غير موجود");
+      setLoading(false);
+      return;
+    }
     
     try {
       setLoading(true);
+      setError(null);
       const contestId = Number(id);
-      console.log("📤 Fetching standings for contest:", contestId);
+      console.log("📤 Fetching stages for contest:", contestId);
       
-      // محاولة endpoints مختلفة
-      const endpoints = [
-        `/api/contests/${contestId}/standings`,
-        `/api/contests/${contestId}/leaderboard`,
-        `/api/contests/${contestId}/rankings`,
-        `/api/contests/${contestId}/staging`,
-      ];
-      
-      let lastError;
-      for (const endpoint of endpoints) {
-        try {
-          console.log(`🔄 Trying endpoint: ${endpoint}`);
-          const response = await api.get(endpoint);
-          const data = Array.isArray(response.data) ? response.data : [];
-          console.log(`✅ Fetched ${data.length} standings from: ${endpoint}`);
-          setStandings(data);
-          setError(null);
-          return;
-        } catch (error) {
-          console.log(`❌ Failed with endpoint: ${endpoint}`, error?.response?.status);
-          lastError = error;
-          if (error?.response?.status !== 404) {
-            throw error;
-          }
-        }
+      if (isNaN(contestId) || contestId <= 0) {
+        throw new Error("معرف المسابقة غير صحيح");
       }
       
-      // إذا فشلت جميع المحاولات، استخدم بيانات وهمية للعرض
-      console.warn("⚠️ No standings endpoint found, using empty array");
-      setStandings([]);
+      // استخدام endpoint الصحيح
+      const response = await api.get(`/api/contests/${contestId}/stages`, {
+        headers: {
+          accept: "*/*",
+        },
+      });
+      
+      console.log("📥 Raw response:", response);
+      console.log("📥 Response data:", response.data);
+      
+      // معالجة البيانات - قد تكون array مباشرة أو داخل property
+      let data = [];
+      if (Array.isArray(response.data)) {
+        data = response.data;
+      } else if (response.data && Array.isArray(response.data.data)) {
+        data = response.data.data;
+      } else if (response.data && Array.isArray(response.data.items)) {
+        data = response.data.items;
+      } else if (response.data && Array.isArray(response.data.results)) {
+        data = response.data.results;
+      }
+      
+      // ترتيب البيانات حسب rank (البيانات تأتي مرتبة بالفعل، لكن نتأكد)
+      const sortedData = data.sort((a, b) => {
+        const rankA = a.rank || 999999;
+        const rankB = b.rank || 999999;
+        return rankA - rankB;
+      });
+      
+      console.log(`✅ Fetched ${sortedData.length} standings from stages endpoint`);
+      console.log("📊 Standings data:", sortedData);
+      
+      if (sortedData.length === 0) {
+        console.warn("⚠️ No standings data found");
+      }
+      
+      setStandings(sortedData);
       setError(null);
     } catch (err) {
       console.error("❌ Error fetching standings:", err);
-      setError("فشل في جلب ترتيب المسابقة: " + (err.message || "خطأ غير معروف"));
-      setStandings([]);
+      console.error("❌ Error details:", {
+        message: err.message,
+        response: err.response?.data,
+        status: err.response?.status,
+        url: err.config?.url,
+      });
+      
+      let errorMessage = "فشل في جلب ترتيب المسابقة";
+      if (err?.response?.data) {
+        if (typeof err.response.data === "string") {
+          errorMessage = err.response.data;
+        } else if (err.response.data.message) {
+          errorMessage = err.response.data.message;
+        } else if (err.response.data.error) {
+          errorMessage = String(err.response.data.error);
+        }
+      } else if (err?.message) {
+        errorMessage = err.message;
+      }
+      
+      // إذا كان 404، لا نعرضه كخطأ، فقط لا توجد بيانات
+      if (err?.response?.status === 404) {
+        setStandings([]);
+        setError(null);
+      } else {
+        setError(errorMessage);
+        setStandings([]);
+      }
     } finally {
       setLoading(false);
     }
@@ -102,6 +144,12 @@ export default function ContestStagging() {
     if (rank === 2) return <Medal className="w-6 h-6 text-gray-400" />;
     if (rank === 3) return <Award className="w-6 h-6 text-orange-500" />;
     return <span className="text-gray-600 font-bold">{rank}</span>;
+  };
+
+  // حساب عدد المسائل المحلولة من stages
+  const getSolvedCount = (stages) => {
+    if (!Array.isArray(stages)) return 0;
+    return stages.filter(stage => stage.isAccepted === true).length;
   };
 
   if (loading && !contest) {
@@ -188,7 +236,13 @@ export default function ContestStagging() {
           <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 max-w-md mx-auto">
             <Trophy className="w-16 h-16 text-gray-400 mx-auto mb-4" />
             <p className="text-gray-600 text-lg mb-2">📭 لا يوجد ترتيب بعد</p>
-            <p className="text-gray-500 text-sm">لم يتم تسجيل أي نتائج في هذه المسابقة حتى الآن.</p>
+            <p className="text-gray-500 text-sm mb-4">لم يتم تسجيل أي نتائج في هذه المسابقة حتى الآن.</p>
+            <button
+              onClick={fetchStandings}
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            >
+              إعادة المحاولة
+            </button>
           </div>
         </div>
       ) : (
@@ -201,64 +255,100 @@ export default function ContestStagging() {
                 <th className="px-4 py-3 text-right font-semibold">المستخدم</th>
                 <th className="px-4 py-3 text-right font-semibold">النقاط</th>
                 <th className="px-4 py-3 text-right font-semibold">المسائل المحلولة</th>
-                <th className="px-4 py-3 text-right font-semibold">الوقت الإجمالي</th>
+                <th className="px-4 py-3 text-right font-semibold">تفاصيل المراحل</th>
               </tr>
             </thead>
             <tbody>
-              {standings.map((entry, index) => (
-                <tr
-                  key={entry.userId || entry.id || index}
-                  className={`border-b hover:bg-gray-50 ${
-                    index < 3 ? "bg-yellow-50" : ""
-                  }`}
-                >
-                  <td className="px-4 py-3 text-center">
-                    <div className="flex items-center justify-center">
-                      {getRankIcon(index + 1)}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-3">
-                      {entry.imageURL ? (
-                        <img
-                          src={entry.imageURL}
-                          alt={entry.userName || "User"}
-                          className="w-10 h-10 rounded-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-sm font-semibold">
-                          {(entry.userName || "U")[0].toUpperCase()}
+              {standings.map((entry, index) => {
+                const rank = entry.rank || (index + 1);
+                const solvedCount = getSolvedCount(entry.stages);
+                
+                return (
+                  <tr
+                    key={entry.idUser || entry.userId || index}
+                    className={`border-b hover:bg-gray-50 ${
+                      rank <= 3 ? "bg-yellow-50" : ""
+                    }`}
+                  >
+                    <td className="px-4 py-3 text-center">
+                      <div className="flex items-center justify-center">
+                        {getRankIcon(rank)}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-sm font-semibold overflow-hidden relative">
+                          {entry.imageURL ? (
+                            <img
+                              src={entry.imageURL}
+                              alt={entry.userName || "User"}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                // إذا فشل تحميل الصورة، اعرض الحرف الأول
+                                e.target.style.display = "none";
+                                const parent = e.target.parentElement;
+                                parent.style.display = "flex";
+                                parent.style.alignItems = "center";
+                                parent.style.justifyContent = "center";
+                                if (!parent.textContent) {
+                                  parent.textContent = (entry.userName || "U")[0].toUpperCase();
+                                }
+                              }}
+                            />
+                          ) : null}
+                          {!entry.imageURL && (entry.userName || "U")[0].toUpperCase()}
                         </div>
-                      )}
-                      <div>
-                        <p className="font-semibold text-gray-800">
-                          {entry.userName || "مستخدم غير معروف"}
-                        </p>
-                        {entry.userId && (
-                          <p className="text-xs text-gray-500">ID: {entry.userId}</p>
+                        <div>
+                          <p className="font-semibold text-gray-800">
+                            {entry.userName || "مستخدم غير معروف"}
+                          </p>
+                          {entry.idUser && (
+                            <p className="text-xs text-gray-500">ID: {entry.idUser}</p>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <span className={`font-bold text-lg ${
+                        rank === 1 ? "text-yellow-600" :
+                        rank === 2 ? "text-gray-500" :
+                        rank === 3 ? "text-orange-600" :
+                        "text-blue-600"
+                      }`}>
+                        {entry.score || 0}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <span className="font-medium text-gray-700">
+                        {solvedCount} / {entry.stages?.length || 0}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-wrap gap-2 justify-center">
+                        {entry.stages && Array.isArray(entry.stages) && entry.stages.length > 0 ? (
+                          entry.stages.map((stage, stageIndex) => (
+                            <div
+                              key={stage.problemId || stageIndex}
+                              className={`px-2 py-1 rounded text-xs font-semibold ${
+                                stage.isAccepted
+                                  ? "bg-green-100 text-green-800"
+                                  : "bg-red-100 text-red-800"
+                              }`}
+                              title={`Problem ${stage.problemId} - ${stage.isAccepted ? "Accepted" : "Not Accepted"} - Wrong: ${stage.totalWrongSubmissions || 0}`}
+                            >
+                              P{stage.problemId}
+                              {stage.isAccepted && " ✓"}
+                              {stage.totalWrongSubmissions > 0 && ` (-${stage.totalWrongSubmissions})`}
+                            </div>
+                          ))
+                        ) : (
+                          <span className="text-gray-400 text-sm">لا توجد مراحل</span>
                         )}
                       </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    <span className="font-bold text-blue-600 text-lg">
-                      {entry.totalScore || entry.score || entry.points || 0}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    <span className="font-medium text-gray-700">
-                      {entry.solvedProblems || entry.solvedCount || 0}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    <span className="text-gray-600">
-                      {entry.totalTime
-                        ? `${Math.floor(entry.totalTime / 60)}:${String(entry.totalTime % 60).padStart(2, "0")}`
-                        : "—"}
-                    </span>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

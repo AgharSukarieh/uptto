@@ -1,8 +1,9 @@
 // src/Pages/Problem/Admin/AddAlgorithm.js
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../../../Service/api"; // افترض أن هذا axios instance مع baseURL مضبوط
 import { Editor } from "@tinymce/tinymce-react";
+import { addAlgorithm as addAlgorithmService } from "../../../Service/algorithmService";
 
 /**
  * ملاحظة مهمة:
@@ -46,7 +47,7 @@ const uploadVideoFile = async (file) => {
 };
 
 export default function AddAlgorithm() {
-  const { id: tagId } = useParams();
+  const { tagId } = useParams();
   const navigate = useNavigate();
 
   const [algorithm, setAlgorithm] = useState({
@@ -57,11 +58,15 @@ export default function AddAlgorithm() {
     start: "",
     end: "",
     tagId: Number(tagId) || 0,
+    imageURL: "",
+    shortDescription: "",
     exampleTags: [],
     youTubeLinks: [],
     videos: [],
   });
 
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
   const [videoPreviews, setVideoPreviews] = useState([]);
   const [thumbnailPreviews, setThumbnailPreviews] = useState([]);
   const [exampleVideoPreviews, setExampleVideoPreviews] = useState([]);
@@ -71,6 +76,16 @@ export default function AddAlgorithm() {
   const [uploadProgress, setUploadProgress] = useState("");
 
   const TINYMCE_API_KEY = "ydbgd84essmlucuqp6di1jaz8o8m7murr9yj34z0en3lv9r5";
+
+  // تحديث tagId عند تغيير الرابط
+  useEffect(() => {
+    if (tagId) {
+      setAlgorithm(prev => ({
+        ...prev,
+        tagId: Number(tagId) || 0
+      }));
+    }
+  }, [tagId]);
 
   /* ======= IMPORTANT FIX: pass plugins as individual strings (NOT grouped with spaces) ======= */
   const tinymceInit = {
@@ -296,49 +311,112 @@ export default function AddAlgorithm() {
         })
       );
 
-      // رفع فيديوهات الأمثلة
+      // رفع فيديوهات الأمثلة (ملاحظة: فيديوهات الأمثلة لا تُرسل في exampleTags حسب API)
+      // لكن نحتفظ بها محلياً للعرض فقط
       setUploadProgress("جار رفع فيديوهات الأمثلة...");
       const exampleVideos = await Promise.all(
         algorithm.exampleTags.map(async (ex) => {
-          if (!ex.videos || ex.videos.length === 0) return ex;
-          const vids = await Promise.all(
-            ex.videos.map(async (v) => {
-              let uploadedVideoUrl = v.url || "";
-              let uploadedThumbUrl = v.thumbnailUrl || "";
-
-              if (v.file) {
-                try {
-                  uploadedVideoUrl = await uploadVideoFile(v.file);
-                } catch (err) {
-                  setModal({ show: true, message: "فشل رفع فيديو مثال. تأكد من المسارات وحاول لاحقاً.", type: "error" });
-                  throw err;
+          // ملاحظة: فيديوهات الأمثلة (ex.videos) لا تُرسل في exampleTags حسب curl command
+          // لكن نحتفظ بها محلياً للعرض فقط
+          // إذا كان هناك فيديوهات، نرفعها لكن لا نرسلها في exampleTags
+          
+          // رفع فيديوهات الأمثلة إذا كانت موجودة (للاحتفاظ بها محلياً فقط)
+          if (ex.videos && ex.videos.length > 0) {
+            await Promise.all(
+              ex.videos.map(async (v) => {
+                if (v.file) {
+                  try {
+                    await uploadVideoFile(v.file);
+                  } catch (err) {
+                    console.warn("⚠️ [AddAlgorithm] Failed to upload example video:", err);
+                    // لا نرمي الخطأ هنا لأن فيديوهات الأمثلة لا تُرسل في API
+                  }
                 }
-              }
-              if (v.thumbnailFile) {
-                try {
-                  uploadedThumbUrl = await uploadUserImage(v.thumbnailFile, v.thumbnailUrl);
-                } catch (err) {
-                  setModal({ show: true, message: "فشل رفع صورة مصغرة لفيديو المثال.", type: "error" });
-                  throw err;
+                if (v.thumbnailFile) {
+                  try {
+                    await uploadUserImage(v.thumbnailFile, v.thumbnailUrl);
+                  } catch (err) {
+                    console.warn("⚠️ [AddAlgorithm] Failed to upload example video thumbnail:", err);
+                    // لا نرمي الخطأ هنا لأن فيديوهات الأمثلة لا تُرسل في API
+                  }
                 }
-              }
-              return { ...v, url: uploadedVideoUrl, thumbnailUrl: uploadedThumbUrl, file: null, thumbnailFile: null };
-            })
-          );
-          return { ...ex, videos: vids };
+              })
+            );
+          }
+          
+          // إرجاع example بدون videos (حسب curl command، exampleTags لا تحتوي على videos)
+          const { videos, ...exampleWithoutVideos } = ex;
+          return exampleWithoutVideos;
         })
       );
 
+      // رفع الصورة الرئيسية أولاً
+      let finalImageURL = algorithm.imageURL || "";
+      if (imageFile) {
+        setUploadProgress("جار رفع الصورة الرئيسية...");
+        try {
+          finalImageURL = await uploadUserImage(imageFile, algorithm.imageURL);
+          console.log("✅ [AddAlgorithm] Image uploaded:", finalImageURL);
+        } catch (err) {
+          console.error("❌ [AddAlgorithm] Image upload failed:", err);
+          setModal({ show: true, message: "فشل رفع الصورة الرئيسية: " + (err?.message || "خطأ غير معروف"), type: "error" });
+          throw err;
+        }
+      }
+
       setUploadProgress("جار إضافة الخوارزمية...");
-      // إرسال الداتا النهائية
-      await api.post("/explained-tags", { ...algorithm, videos: videosWithUrl, exampleTags: exampleVideos });
+      
+      // إعداد البيانات النهائية حسب API الجديد
+      const finalAlgorithmData = {
+        ...algorithm,
+        imageURL: finalImageURL,
+        videos: videosWithUrl,
+        exampleTags: exampleVideos,
+        // التأكد من أن exampleTags لا تحتوي على videos (فيديوهات الأمثلة لا تُرسل في exampleTags)
+        exampleTags: exampleVideos.map(ex => ({
+          title: ex.title || "",
+          code: ex.code || "",
+          explanation: ex.explanation || "",
+          input: ex.input || "",
+          output: ex.output || "",
+          stepByStep: ex.stepByStep || "",
+          priority: Number(ex.priority) || 0,
+          explaineTagId: 0
+        }))
+      };
+
+      console.log("📤 [AddAlgorithm] Final data to send:", JSON.stringify(finalAlgorithmData, null, 2));
+      
+      // استخدام addAlgorithmService من algorithmService
+      await addAlgorithmService(finalAlgorithmData);
 
       setUploadProgress("");
       setModal({ show: true, message: "تم إضافة الخوارزمية بنجاح!", type: "success" });
     } catch (err) {
-      console.error("handleSubmit error:", err);
+      console.error("❌ [AddAlgorithm] handleSubmit error:", err);
+      console.error("❌ [AddAlgorithm] Error details:", err?.response?.data || err?.message);
+      
+      let errorMessage = "حدث خطأ أثناء الإضافة. تفقد الكونسول والـ Network.";
+      
+      if (err?.response?.data) {
+        if (typeof err.response.data === "string") {
+          errorMessage = err.response.data;
+        } else if (err.response.data.message) {
+          errorMessage = err.response.data.message;
+        } else if (err.response.data.errors) {
+          const errors = Object.values(err.response.data.errors).flat();
+          errorMessage = errors.join(", ");
+        } else if (err.response.data.title) {
+          errorMessage = err.response.data.title;
+        }
+      } else if (err?.message) {
+        errorMessage = err.message;
+      }
+      
       // لو لم نضع مودال مسبقاً لأحد الأخطاء، نعرض مودال عام
-      if (!modal.show) setModal({ show: true, message: "حدث خطأ أثناء الإضافة. تفقد الكونسول والـ Network.", type: "error" });
+      if (!modal.show) {
+        setModal({ show: true, message: errorMessage, type: "error" });
+      }
     } finally {
       setLoading(false);
     }
@@ -384,6 +462,37 @@ export default function AddAlgorithm() {
       <div className="bg-white p-6 rounded-lg shadow space-y-4">
         <label className="font-semibold">العنوان</label>
         <input type="text" value={algorithm.title} onChange={(e) => handleChange("title", e.target.value)} className="w-full border p-3 rounded" />
+
+        <label className="font-semibold">الوصف المختصر (مطلوب)</label>
+        <textarea 
+          value={algorithm.shortDescription || ""} 
+          onChange={(e) => handleChange("shortDescription", e.target.value)} 
+          className="w-full border p-3 rounded" 
+          rows="3"
+          placeholder="أدخل وصفاً مختصراً للخوارزمية..."
+        />
+
+        <label className="font-semibold">صورة الخوارزمية (مطلوب)</label>
+        <div className="space-y-2">
+          <input 
+            type="file" 
+            accept="image/*" 
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) {
+                setImageFile(file);
+                const preview = URL.createObjectURL(file);
+                setImagePreview(preview);
+              }
+            }}
+            className="w-full border p-3 rounded"
+          />
+          {imagePreview && (
+            <div className="mt-2">
+              <img src={imagePreview} alt="Preview" className="max-w-xs max-h-48 rounded border" />
+            </div>
+          )}
+        </div>
 
         <label className="font-semibold">نظرة عامة</label>
         <Editor apiKey={TINYMCE_API_KEY} value={algorithm.overview} onEditorChange={(content) => handleChange("overview", content)} init={tinymceInit} />

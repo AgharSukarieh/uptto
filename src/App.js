@@ -37,6 +37,7 @@ import EditUser from "./Pages/User/Admin/EditUser";
 import ContestList from "./Pages/Contest/Admin/ContestList";
 import AddContest from "./Pages/Contest/Admin/AddContest";
 import EditContest from "./Pages/Contest/Admin/EditContest";
+import ContestStagging from "./Pages/Contest/Admin/ContestStagging";
 import AllPostAdmin from "./Pages/Posts/Admin/AllPostAdmin";
 import PostReportsAdmin from "./Pages/Posts/Admin/PostReportsAdmin";
 import EditePost from "./Pages/Posts/Admin/EditePost";
@@ -120,6 +121,7 @@ function AppContent() {
           <Route path="post-reports" element={<PostReportsAdmin />} />
           <Route path="problem-requests" element={<AllProblemRequest />} />
           <Route path="Algorithm" element={<ShowTags />} />
+          <Route path="AlgorithmDetails/:id" element={<AlgorithmDetailsShow />} />
           <Route path="Algorithm/:id" element={<AlgorithmsAdmin />} />
           <Route path="notifications" element={<NotificationPageAdmin />} />
           <Route path="QuotesPage/:id" element={<QuotesPage />} />
@@ -141,6 +143,7 @@ function AppContent() {
           <Route path="view-user/:id" element={<ViewUser />} />
           <Route path="edit-user/:id" element={<EditUser />} />
           <Route path="EditContest/:id" element={<EditContest />} />
+          <Route path="Stagging/:id" element={<ContestStagging />} />
           <Route path="AdminEditPost/:postId" element={<EditePost />} />
           <Route path="AdminPostDetails/:id" element={<AdminPostDetails />} />
           <Route path="notifications" element={<NotificationPageAdmin />} />
@@ -152,10 +155,6 @@ function AppContent() {
           <Route path="AddAlgorithm/:tagId" element={<AddAlgorithm />} />
           <Route path="EditAlgorithm/:id" element={<EditAlgorithm />} />
           <Route path="EditUniversity/:id" element={<EditUniversity />} />
-          <Route
-            path="AlgorithmDetails/:id"
-            element={<AlgorithmDetailsShow />}
-          />
         </Route>
 
         <Route path="/algorithms" element={<Algorithms />} />

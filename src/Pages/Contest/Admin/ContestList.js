@@ -109,12 +109,12 @@ const ContestList = () => {
             <div className="flex flex-wrap gap-2 justify-between mt-3">
               <button
                 onClick={() =>
-                  navigate(`/react-app/Admin/Stagging/${contest.id}`)
+                  navigate(`/react-app/admin/Stagging/${contest.id}`)
                 }
                 className="bg-indigo-500 text-white px-3 py-1 rounded-lg hover:bg-indigo-600"
               >
-الاعدادات              
-</button>
+                ترتيب المسابقة
+              </button>
 
               <button
                 onClick={() =>

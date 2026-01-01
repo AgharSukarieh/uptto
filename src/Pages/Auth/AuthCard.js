@@ -483,8 +483,8 @@ const AuthCard = ({
       return;
     }
 
-    if (forgotPasswordNewPassword.trim().length < 6) {
-      showAlert("كلمة السر يجب أن تكون 6 أحرف على الأقل", "error");
+    if (forgotPasswordNewPassword.trim().length < 8) {
+      showAlert("كلمة السر يجب أن تكون 8 أحرف على الأقل", "error");
       return;
     }
 
@@ -1006,8 +1006,8 @@ const AuthCard = ({
       return;
     }
 
-    if (trimmedPassword.length < 6) {
-      showAlert("كلمة السر يجب أن تكون 6 أحرف على الأقل", "error");
+    if (trimmedPassword.length < 8) {
+      showAlert("كلمة السر يجب أن تكون 8 أحرف على الأقل", "error");
       return;
     }
 
@@ -1727,7 +1727,7 @@ const AuthCard = ({
               <div className="otp-modal-actions">
                 <button
                   onClick={handleRestorePassword}
-                  disabled={forgotPasswordLoading || !forgotPasswordNewPassword.trim() || forgotPasswordNewPassword.trim().length < 6}
+                  disabled={forgotPasswordLoading || !forgotPasswordNewPassword.trim() || forgotPasswordNewPassword.trim().length < 8}
                   className="btn btn-primary otp-verify-btn"
                 >
                   {forgotPasswordLoading ? "جاري التغيير..." : "تغيير كلمة المرور"}

@@ -5,6 +5,8 @@ import { selectAuthSession } from "../../store/authSlice";
 import { getProblemById } from "../../Service/ProblemService";
 import { handelSubmission } from "../../Service/submissionServices";
 import { getProblemWithRatings, addProblemRating, updateProblemRating, deleteProblemRating } from "../../Service/ProblemRatingService";
+import { checkContestRegistration, getContestById } from "../../Service/contestService";
+import Swal from "sweetalert2";
 import DOMPurify from "dompurify";
 import "./problemSolver.css";
 
@@ -39,6 +41,11 @@ const ProblemSolver = () => {
   
   // Delete state
   const [deletingId, setDeletingId] = useState(null);
+  
+  // Contest registration check state
+  const [checkingRegistration, setCheckingRegistration] = useState(false);
+  const [isRegisteredInContest, setIsRegisteredInContest] = useState(true); // Default true to allow access if not from contest
+  const [contestStarted, setContestStarted] = useState(true); // Default true to allow access
 
   // دالة لتنظيف HTML قبل العرض
   const sanitizeHtml = (dirty) =>
@@ -50,8 +57,102 @@ const ProblemSolver = () => {
   const lineNumbersRef = useRef(null);
   const splitRef = useRef(null);
 
+  // Check contest registration and start time if coming from contest
+  useEffect(() => {
+    const checkRegistrationAndStartTime = async () => {
+      // Check if user came from a contest
+      if (location.state?.fromContest && location.state?.contestId) {
+        const contestId = location.state.contestId;
+        setCheckingRegistration(true);
+        try {
+          // Check registration
+          const registered = await checkContestRegistration(contestId);
+          console.log("📋 Registration status for contest", contestId, ":", registered);
+          setIsRegisteredInContest(registered);
+          
+          // If registered, check if contest has started
+          if (registered) {
+            try {
+              const contestData = await getContestById(contestId);
+              console.log("📅 Contest data:", contestData);
+              
+              if (contestData && contestData.startTime) {
+                const startTime = new Date(contestData.startTime);
+                const now = new Date();
+                const hasStarted = now >= startTime;
+                
+                console.log("📅 Contest start time:", startTime);
+                console.log("📅 Current time:", now);
+                console.log("📅 Has started:", hasStarted);
+                
+                setContestStarted(hasStarted);
+                
+                // If contest hasn't started, show popup
+                if (!hasStarted) {
+                  Swal.fire({
+                    icon: "info",
+                    title: "المسابقة لم تبدأ بعد",
+                    text: "لا يمكنك الوصول إلى المسائل حتى تبدأ المسابقة",
+                    confirmButtonText: "موافق",
+                    confirmButtonColor: "#007C89",
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    showCancelButton: false
+                  }).then(() => {
+                    // Navigate back to contest page after closing popup
+                    navigate(`/ViewContest/${contestId}`);
+                  });
+                }
+              } else {
+                // If no start time, allow access
+                setContestStarted(true);
+              }
+            } catch (contestErr) {
+              console.error("❌ Error fetching contest data:", contestErr);
+              // On error, allow access (fail open)
+              setContestStarted(true);
+            }
+          } else {
+            // If not registered, show registration popup
+            Swal.fire({
+              icon: "warning",
+              title: "يجب التسجيل أولاً",
+              text: "يجب أن تكون مسجلاً في المسابقة للوصول إلى هذه المسألة",
+              confirmButtonText: "موافق",
+              confirmButtonColor: "#007C89",
+              allowOutsideClick: false,
+              allowEscapeKey: false,
+              showCancelButton: false
+            }).then(() => {
+              // Navigate back to contest page after closing popup
+              navigate(`/ViewContest/${contestId}`);
+            });
+          }
+        } catch (err) {
+          console.error("❌ Error checking contest registration:", err);
+          // On error, allow access (fail open)
+          setIsRegisteredInContest(true);
+          setContestStarted(true);
+        } finally {
+          setCheckingRegistration(false);
+        }
+      } else {
+        // Not from contest, allow access
+        setIsRegisteredInContest(true);
+        setContestStarted(true);
+      }
+    };
+    
+    checkRegistrationAndStartTime();
+  }, [location.state, navigate]);
+
   useEffect(() => {
     const fetchProblem = async () => {
+      // Don't fetch problem if not registered in contest or contest hasn't started
+      if (location.state?.fromContest && (!isRegisteredInContest || !contestStarted)) {
+        return;
+      }
+      
       setLoading(true);
       try {
         const data = await getProblemById(id);
@@ -76,7 +177,7 @@ int main() {
       }
     };
     fetchProblem();
-  }, [id]);
+  }, [id, location.state, isRegisteredInContest, contestStarted]);
 
   // جلب التقييمات عند فتح تبويب التقييمات
   useEffect(() => {
@@ -518,12 +619,25 @@ int main() {
     }
   };
 
-  if (loading) {
+  // Show loading while checking registration
+  if (checkingRegistration || (loading && isRegisteredInContest && contestStarted)) {
     return (
       <div className="solver-page">
         <div className="solver-loading">
           <div className="solver-spinner"></div>
-          <p>جاري تحميل المسألة...</p>
+          <p>{checkingRegistration ? "جاري التحقق من التسجيل..." : "جاري تحميل المسألة..."}</p>
+        </div>
+      </div>
+    );
+  }
+  
+  // Don't show problem if not registered in contest or contest hasn't started
+  if (location.state?.fromContest && (!isRegisteredInContest || !contestStarted)) {
+    return (
+      <div className="solver-page">
+        <div className="solver-loading">
+          <div className="solver-spinner"></div>
+          <p>جاري التحقق من التسجيل...</p>
         </div>
       </div>
     );

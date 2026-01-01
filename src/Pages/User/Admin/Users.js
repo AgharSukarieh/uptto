@@ -14,6 +14,21 @@ import {
   Cell,
 } from "recharts";
 import { getAllUsers, deleteUser } from "../../../Service/userService";
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
+import {
+  Document,
+  Packer,
+  Paragraph,
+  TextRun,
+  Table,
+  TableRow,
+  TableCell,
+  WidthType,
+  AlignmentType,
+} from "docx";
 
 const placeholderImg =
   "data:image/svg+xml;base64," +
@@ -402,6 +417,12 @@ const UsersPage = () => {
   const [imageMap, setImageMap] = useState({});
   const [navHeight, setNavHeight] = useState(0);
   const wrapperRef = useRef(null);
+  const printableRef = useRef(null);
+
+  // Export states
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportProgress, setExportProgress] = useState(0);
+  const [exportMessage, setExportMessage] = useState("");
 
   // Statistics states
   const [stats, setStats] = useState({
@@ -895,6 +916,312 @@ const UsersPage = () => {
     }
   };
 
+  // ============================
+  // EXPORT EXCEL
+  // ============================
+  const handleExportExcel = async () => {
+    try {
+      setIsExporting(true);
+      setExportProgress(5);
+      setExportMessage("جاري تجهيز بيانات Excel...");
+
+      const formatDate = (d) => {
+        if (!d || d === "0001-01-01T00:00:00") return "-";
+        const date = new Date(d);
+        if (isNaN(date)) return "-";
+        return date.toLocaleDateString("ar-EG");
+      };
+
+      const dataToExport = filteredUsers.map((u, index) => ({
+        "#": index + 1,
+        "اسم المستخدم": u.userName || "-",
+        "البريد الإلكتروني": u.email || "-",
+        "ID": u.id || "-",
+        "الجامعة": u.universityName || "-",
+        "الدولة": u.country?.nameCountry || "-",
+        "تاريخ التسجيل": formatDate(u.registerAt),
+        "آخر نشاط": formatDate(u.lastActive),
+        "الحالة": u.isActive !== false ? "نشط" : "غير نشط",
+        "مميز": u.isPremium ? "نعم" : "لا",
+      }));
+
+      const worksheet = XLSX.utils.json_to_sheet(dataToExport, { origin: "A3" });
+
+      // Header title merged
+      const headerTitle = "قائمة المستخدمين - عرب كودرز";
+      XLSX.utils.sheet_add_aoa(worksheet, [[headerTitle]], { origin: "A1" });
+      worksheet["!merges"] = worksheet["!merges"] || [];
+      worksheet["!merges"].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 9 } });
+
+      // Footer
+      const footerRowIndex = dataToExport.length + 4;
+      const footerText = "جميع الحقوق محفوظة - عرب كودرز 2025";
+      XLSX.utils.sheet_add_aoa(worksheet, [[footerText]], { origin: `A${footerRowIndex}` });
+      worksheet["!merges"].push({
+        s: { r: footerRowIndex - 1, c: 0 },
+        e: { r: footerRowIndex - 1, c: 9 },
+      });
+
+      worksheet["!cols"] = [
+        { wch: 5 },
+        { wch: 20 },
+        { wch: 25 },
+        { wch: 8 },
+        { wch: 20 },
+        { wch: 15 },
+        { wch: 18 },
+        { wch: 18 },
+        { wch: 12 },
+        { wch: 10 },
+      ];
+
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Users");
+
+      setExportProgress(60);
+      setExportMessage("جاري إنشاء ملف Excel...");
+
+      const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
+      const blob = new Blob([excelBuffer], { type: "application/octet-stream" });
+      saveAs(blob, `Users_Ar_Coders_${new Date().getFullYear()}.xlsx`);
+
+      setExportProgress(100);
+      setExportMessage("تم التحميل");
+    } catch (err) {
+      console.error(err);
+      Swal.fire({
+        title: "فشل التصدير",
+        text: "فشل التصدير إلى Excel",
+        icon: "error",
+        confirmButtonColor: "#dc2626",
+      });
+    } finally {
+      setTimeout(() => {
+        setIsExporting(false);
+        setExportProgress(0);
+        setExportMessage("");
+      }, 700);
+    }
+  };
+
+  // ============================
+  // EXPORT PDF
+  // ============================
+  const handleExportPDF = async () => {
+    if (!printableRef.current) {
+      Swal.fire({
+        title: "خطأ",
+        text: "المحتوى غير جاهز للطباعة",
+        icon: "error",
+        confirmButtonColor: "#dc2626",
+      });
+      return;
+    }
+    setIsExporting(true);
+    setExportProgress(0);
+    setExportMessage("جاري تجهيز معاينة PDF...");
+
+    try {
+      const element = printableRef.current;
+      const scale = 2;
+      const canvas = await html2canvas(element, {
+        scale,
+        useCORS: true,
+        backgroundColor: "#ffffff",
+      });
+
+      setExportProgress(10);
+      setExportMessage("جاري تحضير صفحات PDF...");
+
+      const pdf = new jsPDF("p", "mm", "a4");
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+
+      const margin = 10;
+      const pdfWidth = pageWidth - margin * 2;
+      const pdfHeight = pageHeight - margin * 2;
+
+      const pxPerMm = canvas.width / pdfWidth;
+      const pageHeightPx = Math.floor(pdfHeight * pxPerMm);
+
+      const totalPages = Math.max(1, Math.ceil(canvas.height / pageHeightPx));
+      let renderedHeight = 0;
+      let pageIndex = 0;
+
+      while (renderedHeight < canvas.height) {
+        const chunkHeight = Math.min(pageHeightPx, canvas.height - renderedHeight);
+
+        const pageCanvas = document.createElement("canvas");
+        pageCanvas.width = canvas.width;
+        pageCanvas.height = chunkHeight;
+
+        const ctx = pageCanvas.getContext("2d");
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+
+        ctx.drawImage(
+          canvas,
+          0,
+          renderedHeight,
+          canvas.width,
+          chunkHeight,
+          0,
+          0,
+          pageCanvas.width,
+          pageCanvas.height
+        );
+
+        const imgData = pageCanvas.toDataURL("image/png");
+        const imgProps = pdf.getImageProperties(imgData);
+        const imgWidth = pdfWidth;
+        const imgHeight = (imgProps.height * imgWidth) / imgProps.width;
+
+        if (pageIndex > 0) pdf.addPage();
+        pdf.addImage(imgData, "PNG", margin, margin, imgWidth, imgHeight);
+
+        pageIndex += 1;
+        renderedHeight += chunkHeight;
+        const percent = Math.min(99, Math.round((pageIndex / totalPages) * 100));
+        setExportProgress(percent);
+        setExportMessage(`جاري تجهيز صفحة ${pageIndex} من ${totalPages}...`);
+
+        await new Promise((r) => setTimeout(r, 50));
+      }
+
+      setExportProgress(100);
+      setExportMessage("جارٍ تنزيل ملف PDF...");
+
+      pdf.save(`Users_Ar_Coders_${new Date().getFullYear()}.pdf`);
+    } catch (err) {
+      console.error(err);
+      Swal.fire({
+        title: "فشل التصدير",
+        text: "فشل التصدير إلى PDF: " + (err.message || err),
+        icon: "error",
+        confirmButtonColor: "#dc2626",
+      });
+    } finally {
+      setTimeout(() => {
+        setIsExporting(false);
+        setExportProgress(0);
+        setExportMessage("");
+      }, 800);
+    }
+  };
+
+  // ============================
+  // EXPORT WORD
+  // ============================
+  const handleExportWord = async () => {
+    try {
+      setIsExporting(true);
+      setExportProgress(5);
+      setExportMessage("جاري تجهيز ملف Word...");
+
+      const formatDate = (d) => {
+        if (!d || d === "0001-01-01T00:00:00") return "-";
+        const date = new Date(d);
+        if (isNaN(date)) return "-";
+        return date.toLocaleDateString("ar-EG");
+      };
+
+      const rows = [];
+
+      const headerCells = [
+        new TableCell({
+          children: [new Paragraph({ children: [new TextRun({ text: "#", bold: true })] })],
+          width: { size: 5, type: WidthType.PERCENTAGE },
+        }),
+        new TableCell({
+          children: [new Paragraph({ children: [new TextRun({ text: "اسم المستخدم", bold: true })] })],
+          width: { size: 20, type: WidthType.PERCENTAGE },
+        }),
+        new TableCell({
+          children: [new Paragraph({ children: [new TextRun({ text: "البريد الإلكتروني", bold: true })] })],
+          width: { size: 25, type: WidthType.PERCENTAGE },
+        }),
+        new TableCell({
+          children: [new Paragraph({ children: [new TextRun({ text: "الجامعة", bold: true })] })],
+          width: { size: 20, type: WidthType.PERCENTAGE },
+        }),
+        new TableCell({
+          children: [new Paragraph({ children: [new TextRun({ text: "الدولة", bold: true })] })],
+          width: { size: 15, type: WidthType.PERCENTAGE },
+        }),
+        new TableCell({
+          children: [new Paragraph({ children: [new TextRun({ text: "تاريخ التسجيل", bold: true })] })],
+          width: { size: 15, type: WidthType.PERCENTAGE },
+        }),
+      ];
+      rows.push(new TableRow({ children: headerCells }));
+
+      filteredUsers.forEach((u, i) => {
+        const cells = [
+          new TableCell({ children: [new Paragraph(String(i + 1))] }),
+          new TableCell({ children: [new Paragraph(u.userName || "")] }),
+          new TableCell({ children: [new Paragraph(u.email || "")] }),
+          new TableCell({ children: [new Paragraph(u.universityName || "-")] }),
+          new TableCell({ children: [new Paragraph(u.country?.nameCountry || "-")] }),
+          new TableCell({ children: [new Paragraph(formatDate(u.registerAt))] }),
+        ];
+        rows.push(new TableRow({ children: cells }));
+      });
+
+      setExportProgress(60);
+      setExportMessage("جاري إنشاء ملف Word...");
+
+      const doc = new Document({
+        sections: [
+          {
+            properties: {},
+            children: [
+              new Paragraph({
+                children: [
+                  new TextRun({
+                    text: "قائمة المستخدمين - عرب كودرز",
+                    bold: true,
+                    size: 28,
+                  }),
+                ],
+                alignment: AlignmentType.CENTER,
+              }),
+              new Paragraph({ text: "" }),
+              new Table({
+                rows,
+                width: { size: 100, type: WidthType.PERCENTAGE },
+              }),
+              new Paragraph({ text: "" }),
+              new Paragraph({
+                children: [new TextRun({ text: "جميع الحقوق محفوظة - عرب كودرز 2025", italics: true })],
+                alignment: AlignmentType.CENTER,
+              }),
+            ],
+          },
+        ],
+      });
+
+      const buffer = await Packer.toBlob(doc);
+      saveAs(buffer, `Users_Ar_Coders_${new Date().getFullYear()}.docx`);
+
+      setExportProgress(100);
+      setExportMessage("تم التحميل");
+    } catch (err) {
+      console.error(err);
+      Swal.fire({
+        title: "فشل التصدير",
+        text: "فشل التصدير إلى Word",
+        icon: "error",
+        confirmButtonColor: "#dc2626",
+      });
+    } finally {
+      setTimeout(() => {
+        setIsExporting(false);
+        setExportProgress(0);
+        setExportMessage("");
+      }, 700);
+    }
+  };
+
   // Chart data functions
   const getRegistrationTrendData = () => {
     return users
@@ -1282,22 +1609,25 @@ const UsersPage = () => {
 
             <div className="flex flex-wrap gap-3">
               <button
-                // onClick={handleExportPDF}
-                className="inline-flex items-center gap-3 bg-gradient-to-r from-red-500 to-orange-500 text-white px-5 py-3 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all hover:-translate-y-0.5"
+                onClick={handleExportPDF}
+                disabled={isExporting}
+                className="inline-flex items-center gap-3 bg-gradient-to-r from-red-500 to-orange-500 text-white px-5 py-3 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <FilePdfIcon />
                 PDF
               </button>
               <button
-                // onClick={handleExportWord}
-                className="inline-flex items-center gap-3 bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-5 py-3 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all hover:-translate-y-0.5"
+                onClick={handleExportWord}
+                disabled={isExporting}
+                className="inline-flex items-center gap-3 bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-5 py-3 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <FileWordIcon />
                 Word
               </button>
               <button
-                // onClick={handleExportExcel}
-                className="inline-flex items-center gap-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white px-5 py-3 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all hover:-translate-y-0.5"
+                onClick={handleExportExcel}
+                disabled={isExporting}
+                className="inline-flex items-center gap-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white px-5 py-3 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <FileExcelIcon />
                 Excel
@@ -1636,7 +1966,7 @@ const UsersPage = () => {
           title={`👥 قائمة المستخدمين (${filteredUsers.length})`}
           fullWidth
         >
-          <div className="overflow-x-auto rounded-xl border border-gray-200">
+          <div ref={printableRef} className="overflow-x-auto rounded-xl border border-gray-200">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
                 <tr>
@@ -1838,6 +2168,26 @@ const UsersPage = () => {
           </div>
         </DashboardCard>
       </div>
+
+      {/* Export Overlay */}
+      {isExporting && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-purple-600 mx-auto mb-4"></div>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">جاري التصدير...</h3>
+              <p className="text-gray-600 mb-4">{exportMessage}</p>
+              <div className="w-full bg-gray-200 rounded-full h-2.5 mb-2">
+                <div
+                  className="bg-purple-600 h-2.5 rounded-full transition-all duration-300"
+                  style={{ width: `${exportProgress}%` }}
+                ></div>
+              </div>
+              <p className="text-sm text-gray-500">{exportProgress}%</p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

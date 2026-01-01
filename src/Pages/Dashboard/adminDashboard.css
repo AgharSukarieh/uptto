@@ -599,7 +599,7 @@
 }
 
 .admin-dashboard__content-wrapper {
-  padding: 2rem;
+ 
   min-height: 100vh;
   background: var(--bg-primary);
   width: 100%;
@@ -847,20 +847,23 @@
 .stat-card__value {
   font-size: 2.25rem;
   font-weight: 800;
-  color: var(--text-primary);
   line-height: 1.2;
-  transition: color 0.3s ease;
+  transition: all 0.3s ease;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  /* Fallback for browsers that don't support background-clip */
+  color: #667eea;
 }
 
 .dark-mode .stat-card__value {
-  background: linear-gradient(135deg, #818cf8 0%, #a78bfa 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  background: none;
+  -webkit-background-clip: unset;
+  -webkit-text-fill-color: unset;
+  background-clip: unset;
+  /* White color for dark mode */
+  color: #ffffff !important;
 }
 
 .stat-card__label {
@@ -872,16 +875,31 @@
 }
 
 .stat-card__glow {
-  position: absolute;
-  inset: -2px;
-  border-radius: 20px;
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.3), rgba(118, 75, 162, 0.3));
-  z-index: -1;
-  filter: blur(20px);
+  display: none;
 }
 
-.dark-mode .stat-card__glow {
-  background: linear-gradient(135deg, rgba(129, 140, 248, 0.4), rgba(167, 139, 250, 0.4));
+/* Use ::after instead of separate glow element to match other cards */
+.admin-dashboard__stat-card::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 100px;
+  height: 100px;
+  background: radial-gradient(circle, rgba(102, 126, 234, 0.1) 0%, transparent 70%);
+  border-radius: 50%;
+  transform: translate(30%, -30%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  z-index: 0;
+}
+
+.dark-mode .admin-dashboard__stat-card::after {
+  background: radial-gradient(circle, rgba(129, 140, 248, 0.15) 0%, transparent 70%);
+}
+
+.admin-dashboard__stat-card:hover::after {
+  opacity: 1;
 }
 
 /* Chart Section */
@@ -1241,4 +1259,381 @@
     background: var(--bg-secondary);
     z-index: 10;
   }
+}
+
+/* ============================================
+   Post Reports Page Dark Mode Fixes
+   ============================================ */
+
+.dark-mode .admin-dashboard__content-wrapper {
+  background: var(--admin-bg-primary) !important;
+  color: #000000 !important;
+}
+
+.dark-mode .admin-dashboard__content-wrapper .bg-transparent {
+  background: var(--admin-bg-secondary) !important;
+}
+
+.dark-mode .admin-dashboard__content-wrapper .bg-gray-50,
+.dark-mode .admin-dashboard__content-wrapper .bg-blue-50 {
+  background: var(--admin-bg-primary) !important;
+}
+
+.dark-mode .admin-dashboard__content-wrapper .bg-gray-800 {
+  background: var(--admin-bg-secondary) !important;
+}
+
+.dark-mode .admin-dashboard__content-wrapper .bg-gray-900 {
+  background: var(--admin-bg-primary) !important;
+}
+
+.dark-mode .admin-dashboard__content-wrapper .text-black,
+.dark-mode .admin-dashboard__content-wrapper h1,
+.dark-mode .admin-dashboard__content-wrapper h2,
+.dark-mode .admin-dashboard__content-wrapper h3,
+.dark-mode .admin-dashboard__content-wrapper h4,
+.dark-mode .admin-dashboard__content-wrapper .font-bold,
+.dark-mode .admin-dashboard__content-wrapper .font-semibold {
+  color: #000000 !important;
+}
+
+.dark-mode .admin-dashboard__content-wrapper .text-gray-700,
+.dark-mode .admin-dashboard__content-wrapper .text-gray-600,
+.dark-mode .admin-dashboard__content-wrapper .text-gray-500,
+.dark-mode .admin-dashboard__content-wrapper .text-gray-400,
+.dark-mode .admin-dashboard__content-wrapper p,
+/* ============================================
+   TinyMCE Editor Dark Mode Styles
+   ============================================ */
+
+.dark-mode .tox,
+.dark-mode .tox-tinymce,
+.dark-mode .tox .tox-editor-container,
+.dark-mode .tox .tox-editor-header,
+.dark-mode .tox .tox-menubar,
+.dark-mode .tox .tox-toolbar,
+.dark-mode .tox .tox-toolbar__primary,
+.dark-mode .tox .tox-toolbar__group,
+.dark-mode .tox .tox-edit-area,
+.dark-mode .tox .tox-edit-area__iframe,
+.dark-mode .tox .tox-statusbar {
+  background-color: var(--admin-bg-secondary) !important;
+  color: var(--admin-text-primary) !important;
+  border-color: var(--admin-border-color) !important;
+}
+
+.dark-mode .tox .tox-menubar,
+.dark-mode .tox .tox-toolbar {
+  background-color: var(--admin-bg-secondary) !important;
+  border-bottom-color: var(--admin-border-color) !important;
+}
+
+.dark-mode .tox .tox-mbtn,
+.dark-mode .tox .tox-tbtn {
+  color: var(--admin-text-primary) !important;
+}
+
+.dark-mode .tox .tox-mbtn:hover,
+.dark-mode .tox .tox-tbtn:hover {
+  background-color: var(--admin-bg-tertiary) !important;
+  color: var(--admin-text-primary) !important;
+}
+
+.dark-mode .tox .tox-mbtn--active,
+.dark-mode .tox .tox-tbtn--active {
+  background-color: var(--admin-bg-tertiary) !important;
+  color: var(--admin-text-primary) !important;
+}
+
+.dark-mode .tox .tox-edit-area__iframe {
+  background-color: var(--admin-bg-secondary) !important;
+}
+
+.dark-mode .tox .tox-edit-area__iframe body,
+.dark-mode .tox .tox-edit-area__iframe body.mce-content-body,
+.dark-mode .tox .tox-edit-area__iframe #tinymce,
+.dark-mode .tox .tox-edit-area__iframe #tinymce.mce-content-body {
+  background-color: var(--admin-bg-secondary) !important;
+  background: var(--admin-bg-secondary) !important;
+  color: var(--admin-text-primary) !important;
+}
+
+/* التأكد من أن محتوى iframe يتأثر بالدارك مود */
+.dark-mode .tox .tox-edit-area__iframe html {
+  background-color: var(--admin-bg-secondary) !important;
+  background: var(--admin-bg-secondary) !important;
+}
+
+.dark-mode .tox .tox-edit-area__iframe * {
+  color: var(--admin-text-primary) !important;
+}
+
+.dark-mode .tox .tox-statusbar {
+  background-color: var(--admin-bg-secondary) !important;
+  border-top-color: var(--admin-border-color) !important;
+  color: var(--admin-text-secondary) !important;
+}
+
+.dark-mode .tox .tox-statusbar__path-item {
+  color: var(--admin-text-secondary) !important;
+}
+
+.dark-mode .tox .tox-statusbar__path-item:hover {
+  background-color: var(--admin-bg-tertiary) !important;
+  color: var(--admin-text-primary) !important;
+}
+
+.dark-mode .tox .tox-menu,
+.dark-mode .tox .tox-collection,
+.dark-mode .tox .tox-collection__item {
+  background-color: var(--admin-bg-secondary) !important;
+  color: var(--admin-text-primary) !important;
+  border-color: var(--admin-border-color) !important;
+}
+
+.dark-mode .tox .tox-collection__item:hover,
+.dark-mode .tox .tox-collection__item--active {
+  background-color: var(--admin-bg-tertiary) !important;
+  color: var(--admin-text-primary) !important;
+}
+
+.dark-mode .tox .tox-split-button__chevron svg,
+.dark-mode .tox .tox-mbtn__select-chevron svg {
+  fill: var(--admin-text-primary) !important;
+}
+
+.dark-mode .tox .tox-icon svg {
+  fill: var(--admin-text-primary) !important;
+}
+
+.dark-mode .tox .tox-tbtn--disabled,
+.dark-mode .tox .tox-mbtn--disabled {
+  opacity: 0.5;
+  color: var(--admin-text-tertiary) !important;
+}
+
+.dark-mode .tox .tox-tbtn--disabled svg,
+.dark-mode .tox .tox-mbtn--disabled svg {
+  fill: var(--admin-text-tertiary) !important;
+}
+
+.dark-mode .admin-dashboard__content-wrapper span {
+  color: #000000 !important;
+}
+
+.dark-mode .admin-dashboard__content-wrapper .text-white {
+  color: #000000 !important;
+}
+
+.dark-mode .admin-dashboard__content-wrapper .border-gray-200 {
+  border-color: var(--admin-border-color) !important;
+}
+
+.dark-mode .admin-dashboard__content-wrapper .bg-gray-50 {
+  background: var(--admin-bg-tertiary) !important;
+}
+
+.dark-mode .admin-dashboard__content-wrapper .bg-indigo-50 {
+  background: rgba(99, 102, 241, 0.1) !important;
+}
+
+.dark-mode .admin-dashboard__content-wrapper .bg-red-50 {
+  background: rgba(239, 68, 68, 0.1) !important;
+}
+
+.dark-mode .admin-dashboard__content-wrapper .hover\:bg-gray-50:hover {
+  background: var(--admin-bg-tertiary) !important;
+}
+
+/* ============================================
+   Post Reports Page - Specific Dark Mode Overrides
+   ============================================ */
+
+@media (prefers-color-scheme: dark) {
+  .admin-dashboard__content-wrapper .dark\:text-white {
+    --tw-text-opacity: 1;
+    color: rgb(0 0 0) !important;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .admin-dashboard__content-wrapper .dark\:bg-gray-800 {
+    --tw-bg-opacity: 1;
+    background-color: rgb(244 247 253 / 0%) !important;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .admin-dashboard__content-wrapper .dark\:text-gray-300 {
+    --tw-text-opacity: 1;
+    color: rgb(0 0 0) !important;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .admin-dashboard__content-wrapper .dark\:text-red-400 {
+    --tw-text-opacity: 1;
+    color: rgb(130 0 0) !important;
+  }
+}
+
+/* Additional dark-mode class support */
+.dark-mode .admin-dashboard__content-wrapper .dark\:text-white {
+  --tw-text-opacity: 1;
+  color: rgb(0 0 0) !important;
+}
+
+.dark-mode .admin-dashboard__content-wrapper .dark\:bg-gray-800 {
+  --tw-bg-opacity: 1;
+  background-color: rgb(244 247 253 / 0%) !important;
+}
+
+.dark-mode .admin-dashboard__content-wrapper .dark\:text-gray-300 {
+  --tw-text-opacity: 1;
+  color: rgb(0 0 0) !important;
+}
+
+.dark-mode .admin-dashboard__content-wrapper .dark\:text-red-400 {
+  --tw-text-opacity: 1;
+  color: rgb(130 0 0) !important;
+}
+
+.dark-mode .admin-dashboard__content-wrapper .dark\:text-gray-400 {
+  --tw-text-opacity: 1;
+  color: rgb(0 0 0) !important;
+}
+
+.dark-mode .admin-dashboard__content-wrapper .dark\:text-gray-200 {
+  --tw-text-opacity: 1;
+  color: rgb(0 0 0) !important;
+}
+
+/* ============================================
+   Chat Wrapper Dark Mode Styles
+   ============================================ */
+
+.dark-mode .chat-wrapper {
+  background-color: var(--admin-bg-secondary) !important;
+  color: var(--admin-text-primary) !important;
+  border-color: var(--admin-border-color) !important;
+}
+
+.dark-mode .chat-wrapper .chat-users {
+  background-color: var(--admin-bg-secondary) !important;
+  border-color: var(--admin-border-color) !important;
+  color: var(--admin-text-primary) !important;
+}
+
+.dark-mode .chat-wrapper .chat-users h3 {
+  background-color: var(--admin-bg-secondary) !important;
+  color: var(--admin-text-primary) !important;
+  border-bottom-color: var(--admin-border-color) !important;
+}
+
+.dark-mode .chat-wrapper .chat-panel {
+  background-color: var(--admin-bg-secondary) !important;
+  color: var(--admin-text-primary) !important;
+  border-color: var(--admin-border-color) !important;
+}
+
+.dark-mode .chat-wrapper .chat-messages {
+  background-color: var(--admin-bg-secondary) !important;
+  color: var(--admin-text-primary) !important;
+}
+
+.dark-mode .chat-wrapper .chat-input {
+  background-color: var(--admin-bg-secondary) !important;
+  border-color: var(--admin-border-color) !important;
+  color: var(--admin-text-primary) !important;
+}
+
+.dark-mode .chat-wrapper input,
+.dark-mode .chat-wrapper textarea {
+  background-color: var(--admin-bg-tertiary) !important;
+  border-color: var(--admin-border-color) !important;
+  color: var(--admin-text-primary) !important;
+}
+
+.dark-mode .chat-wrapper input::placeholder,
+.dark-mode .chat-wrapper textarea::placeholder {
+  color: var(--admin-text-tertiary) !important;
+}
+
+.dark-mode .chat-wrapper button {
+  background-color: var(--admin-bg-tertiary) !important;
+  border-color: var(--admin-border-color) !important;
+  color: var(--admin-text-primary) !important;
+}
+
+.dark-mode .chat-wrapper button:hover {
+  background-color: var(--admin-bg-tertiary) !important;
+  opacity: 0.9;
+}
+
+.dark-mode .chat-wrapper .user-row {
+  background-color: var(--admin-bg-secondary) !important;
+  border-bottom-color: var(--admin-border-color) !important;
+  color: var(--admin-text-primary) !important;
+}
+
+.dark-mode .chat-wrapper .user-row:hover {
+  background-color: var(--admin-bg-tertiary) !important;
+}
+
+.dark-mode .chat-wrapper .user-meta .name {
+  color: var(--admin-text-primary) !important;
+}
+
+.dark-mode .chat-wrapper .user-meta .preview {
+  color: var(--admin-text-secondary) !important;
+}
+
+.dark-mode .chat-wrapper .messages-window {
+  background-color: var(--admin-bg-secondary) !important;
+  border-color: var(--admin-border-color) !important;
+  color: var(--admin-text-primary) !important;
+}
+
+.dark-mode .chat-wrapper .msg-bubble {
+  color: var(--admin-text-primary) !important;
+}
+
+.dark-mode .chat-wrapper .msg-in {
+  background-color: var(--admin-bg-tertiary) !important;
+  color: var(--admin-text-primary) !important;
+}
+
+.dark-mode .chat-wrapper .msg-out {
+  background-color: var(--admin-bg-tertiary) !important;
+  color: var(--admin-text-primary) !important;
+}
+
+.dark-mode .chat-wrapper .chat-header .title {
+  color: var(--admin-text-primary) !important;
+}
+
+.dark-mode .chat-wrapper .chat-header .status {
+  color: var(--admin-text-secondary) !important;
+}
+
+.dark-mode .chat-wrapper .chat-send {
+  background-color: var(--admin-bg-tertiary) !important;
+  color: var(--admin-text-primary) !important;
+}
+
+.dark-mode .chat-wrapper .att-thumb {
+  background-color: var(--admin-bg-tertiary) !important;
+  border-color: var(--admin-border-color) !important;
+}
+
+.dark-mode .chat-wrapper .progress-bar {
+  background-color: var(--admin-bg-tertiary) !important;
+}
+
+.dark-mode .chat-wrapper .messages-window::-webkit-scrollbar-thumb {
+  background: var(--admin-bg-tertiary) !important;
+}
+
+.dark-mode .chat-wrapper .messages-window::-webkit-scrollbar-track {
+  background: var(--admin-bg-primary) !important;
 }
