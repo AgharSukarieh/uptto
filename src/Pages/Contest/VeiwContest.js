@@ -504,8 +504,13 @@ export default function ContestProblems() {
       return;
     }
 
-    // Check if user is registered
-    if (!isRegistered) {
+    // Check if contest has ended
+    const endTime = contest?.endTime ? new Date(contest.endTime) : null;
+    const now = new Date();
+    const isEnded = endTime && now >= endTime;
+
+    // If contest is not ended, check if user is registered
+    if (!isEnded && !isRegistered) {
       Swal.fire({
         icon: "warning",
         title: "يجب التسجيل أولاً",
@@ -519,11 +524,11 @@ export default function ContestProblems() {
       return;
     }
 
-    // Check if contest has started
-    if (contest && contest.startTime) {
+    // Check if contest has started (only if not ended)
+    if (!isEnded && contest && contest.startTime) {
       const startTime = new Date(contest.startTime);
-      const now = new Date();
       
+      // Block access only if contest hasn't started yet
       if (now < startTime) {
         Swal.fire({
           icon: "info",

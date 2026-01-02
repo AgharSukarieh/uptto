@@ -65,68 +65,86 @@ const ProblemSolver = () => {
         const contestId = location.state.contestId;
         setCheckingRegistration(true);
         try {
-          // Check registration
-          const registered = await checkContestRegistration(contestId);
-          console.log("📋 Registration status for contest", contestId, ":", registered);
-          setIsRegisteredInContest(registered);
-          
-          // If registered, check if contest has started
-          if (registered) {
-            try {
-              const contestData = await getContestById(contestId);
-              console.log("📅 Contest data:", contestData);
+          // First, check if contest has ended
+          let isEnded = false;
+          try {
+            const contestData = await getContestById(contestId);
+            console.log("📅 Contest data:", contestData);
+            
+            if (contestData && contestData.endTime) {
+              const endTime = new Date(contestData.endTime);
+              const now = new Date();
+              isEnded = now >= endTime;
+              console.log("📅 Contest end time:", endTime);
+              console.log("📅 Current time:", now);
+              console.log("📅 Is ended:", isEnded);
+            }
+            
+            // If contest is ended, allow access without registration
+            if (isEnded) {
+              setIsRegisteredInContest(true);
+              setContestStarted(true);
+              setCheckingRegistration(false);
+              return;
+            }
+            
+            // If contest is not ended, check registration
+            const registered = await checkContestRegistration(contestId);
+            console.log("📋 Registration status for contest", contestId, ":", registered);
+            setIsRegisteredInContest(registered);
+            
+            // If registered, check if contest has started
+            if (registered && contestData && contestData.startTime) {
+              const startTime = new Date(contestData.startTime);
+              const now = new Date();
+              const hasStarted = now >= startTime;
               
-              if (contestData && contestData.startTime) {
-                const startTime = new Date(contestData.startTime);
-                const now = new Date();
-                const hasStarted = now >= startTime;
-                
-                console.log("📅 Contest start time:", startTime);
-                console.log("📅 Current time:", now);
-                console.log("📅 Has started:", hasStarted);
-                
-                setContestStarted(hasStarted);
-                
-                // If contest hasn't started, show popup
-                if (!hasStarted) {
-                  Swal.fire({
-                    icon: "info",
-                    title: "المسابقة لم تبدأ بعد",
-                    text: "لا يمكنك الوصول إلى المسائل حتى تبدأ المسابقة",
-                    confirmButtonText: "موافق",
-                    confirmButtonColor: "#007C89",
-                    allowOutsideClick: false,
-                    allowEscapeKey: false,
-                    showCancelButton: false
-                  }).then(() => {
-                    // Navigate back to contest page after closing popup
-                    navigate(`/ViewContest/${contestId}`);
-                  });
-                }
-              } else {
-                // If no start time, allow access
-                setContestStarted(true);
+              console.log("📅 Contest start time:", startTime);
+              console.log("📅 Current time:", now);
+              console.log("📅 Has started:", hasStarted);
+              
+              setContestStarted(hasStarted);
+              
+              // If contest hasn't started, show popup
+              if (!hasStarted) {
+                Swal.fire({
+                  icon: "info",
+                  title: "المسابقة لم تبدأ بعد",
+                  text: "لا يمكنك الوصول إلى المسائل حتى تبدأ المسابقة",
+                  confirmButtonText: "موافق",
+                  confirmButtonColor: "#007C89",
+                  allowOutsideClick: false,
+                  allowEscapeKey: false,
+                  showCancelButton: false
+                }).then(() => {
+                  // Navigate back to contest page after closing popup
+                  navigate(`/ViewContest/${contestId}`);
+                });
               }
-            } catch (contestErr) {
-              console.error("❌ Error fetching contest data:", contestErr);
-              // On error, allow access (fail open)
+            } else if (!registered) {
+              // If not registered and contest not ended, show registration popup
+              Swal.fire({
+                icon: "warning",
+                title: "يجب التسجيل أولاً",
+                text: "يجب أن تكون مسجلاً في المسابقة للوصول إلى هذه المسألة",
+                confirmButtonText: "موافق",
+                confirmButtonColor: "#007C89",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showCancelButton: false
+              }).then(() => {
+                // Navigate back to contest page after closing popup
+                navigate(`/ViewContest/${contestId}`);
+              });
+            } else {
+              // If no start time, allow access
               setContestStarted(true);
             }
-          } else {
-            // If not registered, show registration popup
-            Swal.fire({
-              icon: "warning",
-              title: "يجب التسجيل أولاً",
-              text: "يجب أن تكون مسجلاً في المسابقة للوصول إلى هذه المسألة",
-              confirmButtonText: "موافق",
-              confirmButtonColor: "#007C89",
-              allowOutsideClick: false,
-              allowEscapeKey: false,
-              showCancelButton: false
-            }).then(() => {
-              // Navigate back to contest page after closing popup
-              navigate(`/ViewContest/${contestId}`);
-            });
+          } catch (contestErr) {
+            console.error("❌ Error fetching contest data:", contestErr);
+            // On error, allow access (fail open)
+            setIsRegisteredInContest(true);
+            setContestStarted(true);
           }
         } catch (err) {
           console.error("❌ Error checking contest registration:", err);
